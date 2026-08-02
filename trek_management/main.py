@@ -1,34 +1,54 @@
 """
-Database initialisation script.
+Trek Management Application Entry Point.
 
-Running this file creates the SQLite database file (trek_management.db)
-and all tables defined in app.models.
-
-Usage:
-    python main.py
+Initializes the Flask application, database, and route blueprints.
 """
 
-from app.database import engine, Base
+import os
+from flask import Flask, redirect, url_for
 
-# Import all models so that Base.metadata is fully populated
-from app.models import (  # noqa: F401
-    User,
-    StaffProfile,
-    Trek,
-    Booking,
-    TrekStaffAssignment,
-)
+from app.database import engine, Base
+from app.models import User, StaffProfile, Trek, Booking, TrekStaffAssignment
+from app.routes.auth_routes import auth_bp
+from app.routes.admin_routes import admin_bp
+from app.routes.staff_routes import staff_bp
+from app.routes.user_routes import user_bp
+from scripts.create_admin import create_admin
+
+
+def create_app():
+    """Create and configure the Flask application."""
+    app = Flask(__name__, template_folder='templates', static_folder='static')
+    
+    # Secure random key for sessions
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
+
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(staff_bp)
+    app.register_blueprint(user_bp)
+
+    @app.route("/")
+    def index():
+        return redirect(url_for('auth.login'))
+
+    return app
 
 
 def init_db():
     """Create all tables that do not yet exist."""
+    print("Initialising database...")
     Base.metadata.create_all(bind=engine)
     print("[OK] Database initialised successfully.")
-    print("     File: trek_management.db")
-    print("    Tables created:")
-    for table_name in Base.metadata.tables:
-        print(f"      - {table_name}")
 
 
 if __name__ == "__main__":
     init_db()
+    
+    # Auto-create admin if env vars are present
+    if os.environ.get("ADMIN_EMAIL") and os.environ.get("ADMIN_PASSWORD"):
+        create_admin()
+
+    app = create_app()
+    app.run(host="127.0.0.1", port=5000, debug=True)

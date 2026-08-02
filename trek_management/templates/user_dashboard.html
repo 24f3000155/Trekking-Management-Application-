@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-5 text-center">
+                <h1 class="display-4 text-success">User Dashboard</h1>
+                <p class="lead mt-3">Welcome back, Trekker {{ user.name }}!</p>
+                <hr class="my-4">
+                <p>This is the protected User area for managing trips.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-lg">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

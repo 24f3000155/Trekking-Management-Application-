@@ -76,6 +76,13 @@ class PaymentStatus(str, enum.Enum):
     REFUNDED = "Refunded"
 
 
+class ApprovalStatus(str, enum.Enum):
+    """Approval status for Trek Staff accounts."""
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
 # ──────────────────────────────────────────────
 # Helper
 # ──────────────────────────────────────────────
@@ -143,6 +150,11 @@ class StaffProfile(Base):
     certification = Column(String(200), nullable=True)
     emergency_contact = Column(String(50), nullable=True)
     bio = Column(Text, nullable=True)
+    approval_status = Column(
+        Enum(ApprovalStatus),
+        nullable=False,
+        default=ApprovalStatus.PENDING,
+    )
 
     # ---- Relationships ----
     user = relationship("User", back_populates="staff_profile")

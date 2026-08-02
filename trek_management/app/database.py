@@ -2,18 +2,21 @@
 Database configuration for the Trek Management System.
 
 Uses SQLAlchemy ORM with SQLite backend.
-Designed to be reusable with FastAPI or any other Python framework.
+Designed to be reusable with Flask or any other Python framework.
 """
 
+import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# SQLite database URL — file is created automatically in the project root
-SQLALCHEMY_DATABASE_URL = "sqlite:///./trek_management.db"
+# Resolve DB path relative to this file's parent directory (trek_management/)
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DB_PATH = os.path.join(_BASE_DIR, "trek_management.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
 # Create the engine with SQLite-specific settings
 # check_same_thread=False is required for SQLite when used with frameworks
-# like FastAPI that may access the DB from multiple threads.
+# that may access the DB from multiple threads.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
