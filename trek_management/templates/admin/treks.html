@@ -1,0 +1,129 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Trek Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title mb-0"><i class="bi bi-mountain me-2"></i>Trek Management</h1>
+    <a href="{{ url_for('admin.trek_create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Create Trek</a>
+</div>
+
+<!-- Search -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('admin.treks') }}" class="d-flex gap-2">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" placeholder="Search treks by name or location…" value="{{ q }}">
+            </div>
+            <button type="submit" class="btn btn-outline-primary">Search</button>
+            {% if q %}<a href="{{ url_for('admin.treks') }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Trek Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if treks %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Trek Name</th>
+                        <th>Location</th>
+                        <th>Difficulty</th>
+                        <th>Duration</th>
+                        <th>Available Slots</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Assigned Staff</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in treks %}
+                    <tr>
+                        <td>{{ t.id }}</td>
+                        <td><a href="{{ url_for('admin.trek_view', trek_id=t.id) }}" class="fw-semibold text-decoration-none">{{ t.trek_name }}</a></td>
+                        <td><i class="bi bi-geo-alt me-1 text-muted"></i>{{ t.location }}</td>
+                        <td>
+                            {% if t.difficulty.value == 'Easy' %}
+                                <span class="badge bg-success">{{ t.difficulty.value }}</span>
+                            {% elif t.difficulty.value == 'Moderate' %}
+                                <span class="badge bg-warning text-dark">{{ t.difficulty.value }}</span>
+                            {% elif t.difficulty.value == 'Hard' %}
+                                <span class="badge bg-danger">{{ t.difficulty.value }}</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ t.difficulty.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.duration_days }} day{{ 's' if t.duration_days > 1 }}</td>
+                        <td>{{ t.available_slots }}/{{ t.total_slots }}</td>
+                        <td>₹{{ "%.0f"|format(t.price|float) }}</td>
+                        <td>
+                            {% if t.status.value == 'Upcoming' %}
+                                <span class="badge bg-info">{{ t.status.value }}</span>
+                            {% elif t.status.value == 'Active' %}
+                                <span class="badge bg-success">{{ t.status.value }}</span>
+                            {% elif t.status.value == 'Completed' %}
+                                <span class="badge bg-secondary">{{ t.status.value }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ t.status.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-dark bg-opacity-75">{{ t.staff_assignments|length }}</span></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin.trek_view', trek_id=t.id) }}" class="btn btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+                                <a href="{{ url_for('admin.trek_edit', trek_id=t.id) }}" class="btn btn-outline-warning" title="Edit"><i class="bi bi-pencil"></i></a>
+                                <button type="button" class="btn btn-outline-danger" title="Delete" onclick="confirmDelete('{{ url_for('admin.trek_delete', trek_id=t.id) }}', '{{ t.trek_name }}')"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-mountain fs-1"></i>
+            <p class="mt-2">No treks found{% if q %} matching "{{ q }}"{% endif %}.</p>
+            <a href="{{ url_for('admin.trek_create') }}" class="btn btn-primary mt-2">Create First Trek</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete <strong id="deleteName"></strong>? This action cannot be undone.
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST">
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(url, name) {
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteForm').action = url;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

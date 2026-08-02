@@ -1,0 +1,205 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}User: {{ target.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="section-title mb-0"><i class="bi bi-person me-2"></i>{{ target.name }}</h1>
+    <div class="ms-auto d-flex gap-2">
+        {% if target.is_active %}
+        <form method="POST" action="{{ url_for('admin.user_deactivate', user_id=target.id) }}"><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
+        {% else %}
+        <form method="POST" action="{{ url_for('admin.user_activate', user_id=target.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
+        {% endif %}
+        {% if target.is_blacklisted %}
+        <form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=target.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-unlock me-1"></i>Unblacklist</button></form>
+        {% else %}
+        <form method="POST" action="{{ url_for('admin.user_blacklist', user_id=target.id) }}"><button class="btn btn-dark btn-sm"><i class="bi bi-slash-circle me-1"></i>Blacklist</button></form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <!-- Profile Card -->
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width:80px;height:80px;">
+                    <i class="bi bi-person-fill text-primary fs-1"></i>
+                </div>
+                <h4 class="mb-1">{{ target.name }}</h4>
+                <p class="text-muted mb-2">{{ target.email }}</p>
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    {% if target.is_blacklisted %}
+                        <span class="badge bg-dark"><i class="bi bi-slash-circle me-1"></i>Blacklisted</span>
+                    {% elif not target.is_active %}
+                        <span class="badge bg-danger">Inactive</span>
+                    {% else %}
+                        <span class="badge bg-success">Active</span>
+                    {% endif %}
+                    <span class="badge bg-primary">{{ target.role.value }}</span>
+                </div>
+                <div class="border-top pt-3 mt-2">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h5 class="mb-0 text-primary">{{ target.bookings|length }}</h5>
+                            <small class="text-muted">Total Bookings</small>
+                        </div>
+                        <div class="col-6">
+                            <h5 class="mb-0 text-success">{{ target.bookings|selectattr('booking_status.value', 'equalto', 'Completed')|list|length }}</h5>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Info -->
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-white"><h6 class="mb-0">Details</h6></div>
+            <div class="card-body">
+                <div class="mb-2"><small class="text-muted text-uppercase">Phone</small><p class="fw-semibold mb-0">{{ target.phone or '—' }}</p></div>
+                <div class="mb-2"><small class="text-muted text-uppercase">Registered</small><p class="fw-semibold mb-0">{{ target.created_at.strftime('%d %b %Y, %H:%M') }}</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Booking Summary Tabs -->
+        <ul class="nav nav-tabs mb-0" role="tablist">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#all-bookings">All Bookings</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#current">Current / Upcoming</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#completed">Completed</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#cancelled">Cancelled</a></li>
+        </ul>
+        <div class="tab-content">
+            <!-- All Bookings -->
+            <div class="tab-pane fade show active" id="all-bookings">
+                <div class="card shadow-sm border-top-0 rounded-top-0">
+                    <div class="card-body p-0">
+                        {% if target.bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light"><tr><th>ID</th><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Payment</th><th>Amount</th></tr></thead>
+                                <tbody>
+                                {% for b in target.bookings|sort(attribute='booking_date', reverse=True) %}
+                                <tr>
+                                    <td><a href="{{ url_for('admin.booking_view', booking_id=b.id) }}">#{{ b.id }}</a></td>
+                                    <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}" class="text-decoration-none">{{ b.trek.trek_name }}</a></td>
+                                    <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                                    <td>{{ b.participants }}</td>
+                                    <td>
+                                        {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>
+                                        {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>
+                                        {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">{{ b.booking_status.value }}</span>
+                                        {% else %}<span class="badge bg-secondary">{{ b.booking_status.value }}</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success">{{ b.payment_status.value }}</span>
+                                        {% elif b.payment_status.value == 'Refunded' %}<span class="badge bg-info">{{ b.payment_status.value }}</span>
+                                        {% else %}<span class="badge bg-warning text-dark">{{ b.payment_status.value }}</span>{% endif %}
+                                    </td>
+                                    <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted"><i class="bi bi-inbox fs-2"></i><p class="mt-2">No bookings yet.</p></div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current/Upcoming -->
+            <div class="tab-pane fade" id="current">
+                <div class="card shadow-sm border-top-0 rounded-top-0">
+                    <div class="card-body p-0">
+                        {% set current_bookings = target.bookings|selectattr('booking_status.value', 'in', ['Confirmed', 'Pending'])|list %}
+                        {% if current_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Amount</th></tr></thead>
+                                <tbody>
+                                {% for b in current_bookings %}
+                                <tr>
+                                    <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
+                                    <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                                    <td>{{ b.participants }}</td>
+                                    <td>{% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>{% else %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>{% endif %}</td>
+                                    <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">No current bookings.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed -->
+            <div class="tab-pane fade" id="completed">
+                <div class="card shadow-sm border-top-0 rounded-top-0">
+                    <div class="card-body p-0">
+                        {% set completed_bookings = target.bookings|selectattr('booking_status.value', 'equalto', 'Completed')|list %}
+                        {% if completed_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Payment</th><th>Amount</th></tr></thead>
+                                <tbody>
+                                {% for b in completed_bookings %}
+                                <tr>
+                                    <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
+                                    <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                                    <td>{{ b.participants }}</td>
+                                    <td><span class="badge bg-success">{{ b.payment_status.value }}</span></td>
+                                    <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">No completed treks.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cancelled -->
+            <div class="tab-pane fade" id="cancelled">
+                <div class="card shadow-sm border-top-0 rounded-top-0">
+                    <div class="card-body p-0">
+                        {% set cancelled_bookings = target.bookings|selectattr('booking_status.value', 'equalto', 'Cancelled')|list %}
+                        {% if cancelled_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Payment</th><th>Amount</th></tr></thead>
+                                <tbody>
+                                {% for b in cancelled_bookings %}
+                                <tr>
+                                    <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
+                                    <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                                    <td>{{ b.participants }}</td>
+                                    <td><span class="badge bg-info">{{ b.payment_status.value }}</span></td>
+                                    <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">No cancelled bookings.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

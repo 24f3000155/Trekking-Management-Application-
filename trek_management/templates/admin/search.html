@@ -1,0 +1,124 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Global Search{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h1 class="section-title mb-0"><i class="bi bi-search me-2"></i>Global Search</h1>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ url_for('admin.search') }}" class="d-flex gap-2 w-75 mx-auto">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0 fs-5" placeholder="Search across treks, users, staff, and bookings…" value="{{ q }}" required autofocus>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg px-4">Search</button>
+        </form>
+    </div>
+</div>
+
+{% if q %}
+    <h4 class="mb-4">Search Results for "{{ q }}"</h4>
+
+    <ul class="nav nav-pills mb-4" id="searchTabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="treks-tab" data-bs-toggle="pill" href="#treks">Treks <span class="badge bg-secondary ms-1">{{ results.treks|length }}</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="users-tab" data-bs-toggle="pill" href="#users">Users <span class="badge bg-secondary ms-1">{{ results.users|length }}</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="staff-tab" data-bs-toggle="pill" href="#staff">Staff <span class="badge bg-secondary ms-1">{{ results.staff|length }}</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="bookings-tab" data-bs-toggle="pill" href="#bookings">Bookings <span class="badge bg-secondary ms-1">{{ results.bookings|length }}</span></a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="searchTabsContent">
+        <!-- Treks Tab -->
+        <div class="tab-pane fade show active" id="treks">
+            {% if results.treks %}
+            <div class="list-group shadow-sm">
+                {% for t in results.treks %}
+                <a href="{{ url_for('admin.trek_view', trek_id=t.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 text-primary">{{ t.trek_name }}</h5>
+                        <small>ID: {{ t.id }}</small>
+                    </div>
+                    <p class="mb-1"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ t.location }}</p>
+                    <small>
+                        Difficulty: <span class="fw-semibold">{{ t.difficulty.value }}</span> | 
+                        Status: <span class="fw-semibold">{{ t.status.value }}</span>
+                    </small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light text-center py-4 border text-muted">No treks match your search.</div>
+            {% endif %}
+        </div>
+
+        <!-- Users Tab -->
+        <div class="tab-pane fade" id="users">
+            {% if results.users %}
+            <div class="list-group shadow-sm">
+                {% for u in results.users %}
+                <a href="{{ url_for('admin.user_view', user_id=u.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 text-primary"><i class="bi bi-person me-2"></i>{{ u.name }}</h5>
+                        <small>ID: {{ u.id }}</small>
+                    </div>
+                    <p class="mb-1">{{ u.email }} | {{ u.phone or 'No phone' }}</p>
+                    <small>Registered: {{ u.created_at.strftime('%d %b %Y') }}</small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light text-center py-4 border text-muted">No users match your search.</div>
+            {% endif %}
+        </div>
+
+        <!-- Staff Tab -->
+        <div class="tab-pane fade" id="staff">
+            {% if results.staff %}
+            <div class="list-group shadow-sm">
+                {% for s in results.staff %}
+                <a href="{{ url_for('admin.staff_view', user_id=s.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 text-primary"><i class="bi bi-person-badge me-2"></i>{{ s.name }}</h5>
+                        <small>ID: {{ s.id }}</small>
+                    </div>
+                    <p class="mb-1">{{ s.email }} | Specialization: {{ s.staff_profile.specialization or 'N/A' if s.staff_profile else 'No profile' }}</p>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light text-center py-4 border text-muted">No staff match your search.</div>
+            {% endif %}
+        </div>
+
+        <!-- Bookings Tab -->
+        <div class="tab-pane fade" id="bookings">
+            {% if results.bookings %}
+            <div class="list-group shadow-sm">
+                {% for b in results.bookings %}
+                <a href="{{ url_for('admin.booking_view', booking_id=b.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 text-primary"><i class="bi bi-journal-check me-2"></i>Booking #{{ b.id }}</h5>
+                        <small>{{ b.booking_date.strftime('%d %b %Y') }}</small>
+                    </div>
+                    <p class="mb-1"><strong>User:</strong> {{ b.user.name }} | <strong>Trek:</strong> {{ b.trek.trek_name }}</p>
+                    <small>Status: <span class="fw-semibold">{{ b.booking_status.value }}</span></small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light text-center py-4 border text-muted">No bookings match your search.</div>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

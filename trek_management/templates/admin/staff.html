@@ -1,0 +1,136 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Trek Staff Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title mb-0"><i class="bi bi-people me-2"></i>Trek Staff Management</h1>
+    <a href="{{ url_for('admin.staff_create') }}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add Staff</a>
+</div>
+
+<!-- Search -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('admin.staff_list') }}" class="d-flex gap-2">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" placeholder="Search staff by name or email…" value="{{ q }}">
+            </div>
+            <button type="submit" class="btn btn-outline-primary">Search</button>
+            {% if q %}<a href="{{ url_for('admin.staff_list') }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Staff Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if staff %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Experience</th>
+                        <th>Specialization</th>
+                        <th>Approval</th>
+                        <th>Account Status</th>
+                        <th>Assigned Treks</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in staff %}
+                    <tr>
+                        <td>{{ s.id }}</td>
+                        <td><a href="{{ url_for('admin.staff_view', user_id=s.id) }}" class="fw-semibold text-decoration-none">{{ s.name }}</a></td>
+                        <td><small>{{ s.email }}</small></td>
+                        <td>{{ s.phone or '—' }}</td>
+                        <td>{{ s.staff_profile.experience_years if s.staff_profile else 0 }} yrs</td>
+                        <td>{{ s.staff_profile.specialization if s.staff_profile and s.staff_profile.specialization else '—' }}</td>
+                        <td>
+                            {% if s.staff_profile %}
+                                {% if s.staff_profile.approval_status.value == 'Approved' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif s.staff_profile.approval_status.value == 'Pending' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-secondary">No Profile</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if not s.is_active %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% elif s.is_blacklisted %}
+                                <span class="badge bg-dark">Blacklisted</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-dark bg-opacity-75">{{ s.staff_profile.trek_assignments|length if s.staff_profile else 0 }}</span></td>
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-gear"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.staff_view', user_id=s.id) }}"><i class="bi bi-eye me-2"></i>View</a></li>
+                                    {% if s.staff_profile and s.staff_profile.approval_status.value == 'Pending' %}
+                                    <li><form method="POST" action="{{ url_for('admin.staff_approve', user_id=s.id) }}"><button class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i>Approve</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.staff_reject', user_id=s.id) }}"><button class="dropdown-item text-danger"><i class="bi bi-x-circle me-2"></i>Reject</button></form></li>
+                                    {% endif %}
+                                    {% if s.is_active %}
+                                    <li><form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=s.id) }}"><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
+                                    {% else %}
+                                    <li><form method="POST" action="{{ url_for('admin.staff_activate', user_id=s.id) }}"><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item text-danger" onclick="confirmDelete('{{ url_for('admin.staff_delete', user_id=s.id) }}', '{{ s.name }}')"><i class="bi bi-trash me-2"></i>Delete</button></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-people fs-1"></i>
+            <p class="mt-2">No staff found{% if q %} matching "{{ q }}"{% endif %}.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">Are you sure you want to delete <strong id="deleteName"></strong>? Consider deactivating instead.</div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST"><button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button></form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDelete(url, name) {
+    document.getElementById('deleteName').textContent = name;
+    document.getElementById('deleteForm').action = url;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

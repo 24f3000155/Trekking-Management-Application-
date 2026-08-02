@@ -1,0 +1,187 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title mb-1"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+        <p class="text-muted mb-0">Welcome back, <strong>{{ user.name }}</strong></p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.trek_create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Trek</a>
+        <a href="{{ url_for('admin.staff_create') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-person-plus me-1"></i>Add Staff</a>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-mountain"></i></div>
+                <div>
+                    <div class="stat-value text-primary">{{ stats.total_treks }}</div>
+                    <div class="stat-label">Total Treks</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-people"></i></div>
+                <div>
+                    <div class="stat-value text-success">{{ stats.total_users }}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-person-badge"></i></div>
+                <div>
+                    <div class="stat-value text-info">{{ stats.total_staff }}</div>
+                    <div class="stat-label">Total Staff</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-journal-bookmark"></i></div>
+                <div>
+                    <div class="stat-value text-warning">{{ stats.total_bookings }}</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100 border-start border-4 border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stat-label">Pending Staff</div>
+                        <div class="stat-value fs-3 text-warning">{{ stats.pending_staff }}</div>
+                    </div>
+                    <i class="bi bi-hourglass-split text-warning fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stat-label">Active Treks</div>
+                        <div class="stat-value fs-3 text-success">{{ stats.active_treks }}</div>
+                    </div>
+                    <i class="bi bi-activity text-success fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100 border-start border-4 border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stat-label">Confirmed Bookings</div>
+                        <div class="stat-value fs-3 text-primary">{{ stats.confirmed_bookings }}</div>
+                    </div>
+                    <i class="bi bi-check-circle text-primary fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card shadow-sm h-100 border-start border-4 border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stat-label">Total Revenue</div>
+                        <div class="stat-value fs-3 text-info">₹{{ "%.2f"|format(stats.total_revenue|float) }}</div>
+                    </div>
+                    <i class="bi bi-currency-rupee text-info fs-2 opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Bookings -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Bookings</h5>
+        <a href="{{ url_for('admin.bookings') }}" class="btn btn-sm btn-outline-primary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_bookings %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Trek</th>
+                        <th>Date</th>
+                        <th>Participants</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in recent_bookings %}
+                    <tr>
+                        <td><a href="{{ url_for('admin.booking_view', booking_id=b.id) }}" class="text-decoration-none">#{{ b.id }}</a></td>
+                        <td>{{ b.user.name if b.user else 'N/A' }}</td>
+                        <td>{{ b.trek.trek_name if b.trek else 'N/A' }}</td>
+                        <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ b.participants }}</td>
+                        <td>
+                            {% if b.booking_status.value == 'Confirmed' %}
+                                <span class="badge bg-success">{{ b.booking_status.value }}</span>
+                            {% elif b.booking_status.value == 'Pending' %}
+                                <span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>
+                            {% elif b.booking_status.value == 'Cancelled' %}
+                                <span class="badge bg-danger">{{ b.booking_status.value }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ b.booking_status.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if b.payment_status.value == 'Paid' %}
+                                <span class="badge bg-success">{{ b.payment_status.value }}</span>
+                            {% elif b.payment_status.value == 'Pending' %}
+                                <span class="badge bg-warning text-dark">{{ b.payment_status.value }}</span>
+                            {% elif b.payment_status.value == 'Refunded' %}
+                                <span class="badge bg-info">{{ b.payment_status.value }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ b.payment_status.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-2">No bookings yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

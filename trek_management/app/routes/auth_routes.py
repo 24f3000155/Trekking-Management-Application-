@@ -32,9 +32,14 @@ def login():
                 flash("Invalid email or password.", "danger")
                 return render_template("login.html")
 
+            # Check if account is blacklisted
+            if user.is_blacklisted:
+                flash("Your account has been blacklisted. Please contact the administrator.", "danger")
+                return render_template("login.html")
+
             # Check if account is active
             if not user.is_active:
-                flash("Your account has been deactivated.", "danger")
+                flash("Your account has been deactivated. Please contact the administrator.", "danger")
                 return render_template("login.html")
 
             # Role-specific checks for Trek Staff

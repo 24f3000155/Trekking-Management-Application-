@@ -1,0 +1,125 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Staff: {{ staff_user.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.staff_list') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="section-title mb-0"><i class="bi bi-person-badge me-2"></i>{{ staff_user.name }}</h1>
+    <div class="ms-auto d-flex gap-2">
+        {% if staff_user.staff_profile and staff_user.staff_profile.approval_status.value == 'Pending' %}
+        <form method="POST" action="{{ url_for('admin.staff_approve', user_id=staff_user.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-check-lg me-1"></i>Approve</button></form>
+        <form method="POST" action="{{ url_for('admin.staff_reject', user_id=staff_user.id) }}"><button class="btn btn-danger btn-sm"><i class="bi bi-x-lg me-1"></i>Reject</button></form>
+        {% endif %}
+        {% if staff_user.is_active %}
+        <form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=staff_user.id) }}"><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
+        {% else %}
+        <form method="POST" action="{{ url_for('admin.staff_activate', user_id=staff_user.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <!-- Profile Info -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-person me-2"></i>Profile Information</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase">Name</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase">Email</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase">Phone</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.phone or '—' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase">Registered</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.created_at.strftime('%d %b %Y') }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted text-uppercase">Account Status</small>
+                        <p class="mb-0">
+                            {% if staff_user.is_active %}<span class="badge bg-success fs-6">Active</span>
+                            {% else %}<span class="badge bg-danger fs-6">Inactive</span>{% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted text-uppercase">Approval Status</small>
+                        <p class="mb-0">
+                            {% if staff_user.staff_profile %}
+                                {% if staff_user.staff_profile.approval_status.value == 'Approved' %}
+                                    <span class="badge bg-success fs-6">Approved</span>
+                                {% elif staff_user.staff_profile.approval_status.value == 'Pending' %}
+                                    <span class="badge bg-warning text-dark fs-6">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-danger fs-6">Rejected</span>
+                                {% endif %}
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if staff_user.staff_profile %}
+        <!-- Staff Details -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Staff Details</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <small class="text-muted text-uppercase">Experience</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.staff_profile.experience_years }} years</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted text-uppercase">Specialization</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.staff_profile.specialization or '—' }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted text-uppercase">Certification</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.staff_profile.certification or '—' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted text-uppercase">Emergency Contact</small>
+                        <p class="fw-semibold mb-2">{{ staff_user.staff_profile.emergency_contact or '—' }}</p>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted text-uppercase">Bio</small>
+                        <p class="mb-0">{{ staff_user.staff_profile.bio or 'No bio provided.' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Assigned Treks Sidebar -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-mountain me-2"></i>Assigned Treks</h6></div>
+            <div class="card-body p-0">
+                {% if staff_user.staff_profile and staff_user.staff_profile.trek_assignments %}
+                <ul class="list-group list-group-flush">
+                    {% for a in staff_user.staff_profile.trek_assignments %}
+                    <li class="list-group-item">
+                        <a href="{{ url_for('admin.trek_view', trek_id=a.trek.id) }}" class="text-decoration-none fw-semibold">{{ a.trek.trek_name }}</a>
+                        <br><small class="text-muted">{{ a.trek.location }} · {{ a.trek.status.value }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-3 text-muted">
+                    <i class="bi bi-mountain"></i> No trek assignments
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

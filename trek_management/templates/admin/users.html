@@ -1,0 +1,92 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="section-title mb-0"><i class="bi bi-person-lines-fill me-2"></i>User Management</h1>
+</div>
+
+<!-- Search -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('admin.users') }}" class="d-flex gap-2">
+            <div class="input-group">
+                <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" placeholder="Search users by name or email…" value="{{ q }}">
+            </div>
+            <button type="submit" class="btn btn-outline-primary">Search</button>
+            {% if q %}<a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if all_users %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Registered</th>
+                        <th>Bookings</th>
+                        <th>Account Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in all_users %}
+                    <tr>
+                        <td>{{ u.id }}</td>
+                        <td><a href="{{ url_for('admin.user_view', user_id=u.id) }}" class="fw-semibold text-decoration-none">{{ u.name }}</a></td>
+                        <td><small>{{ u.email }}</small></td>
+                        <td>{{ u.phone or '—' }}</td>
+                        <td>{{ u.created_at.strftime('%d %b %Y') }}</td>
+                        <td><span class="badge bg-dark bg-opacity-75">{{ u.bookings|length }}</span></td>
+                        <td>
+                            {% if u.is_blacklisted %}
+                                <span class="badge bg-dark"><i class="bi bi-slash-circle me-1"></i>Blacklisted</span>
+                            {% elif not u.is_active %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-gear"></i></button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.user_view', user_id=u.id) }}"><i class="bi bi-eye me-2"></i>View Profile</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% if u.is_active %}
+                                    <li><form method="POST" action="{{ url_for('admin.user_deactivate', user_id=u.id) }}"><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
+                                    {% else %}
+                                    <li><form method="POST" action="{{ url_for('admin.user_activate', user_id=u.id) }}"><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
+                                    {% endif %}
+                                    {% if u.is_blacklisted %}
+                                    <li><form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=u.id) }}"><button class="dropdown-item text-success"><i class="bi bi-unlock me-2"></i>Unblacklist</button></form></li>
+                                    {% else %}
+                                    <li><form method="POST" action="{{ url_for('admin.user_blacklist', user_id=u.id) }}"><button class="dropdown-item text-danger"><i class="bi bi-slash-circle me-2"></i>Blacklist</button></form></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-people fs-1"></i>
+            <p class="mt-2">No users found{% if q %} matching "{{ q }}"{% endif %}.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

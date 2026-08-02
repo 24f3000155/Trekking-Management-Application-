@@ -1,0 +1,136 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Booking #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.bookings') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="section-title mb-0"><i class="bi bi-journal-check me-2"></i>Booking #{{ booking.id }}</h1>
+    <div class="ms-auto d-flex gap-2">
+        {% if booking.booking_status.value != 'Cancelled' %}
+        <form method="POST" action="{{ url_for('admin.booking_cancel', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure you want to cancel this booking? Slots will be restored.');">
+            <button class="btn btn-danger btn-sm"><i class="bi bi-x-circle me-1"></i>Cancel Booking</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Booking Status Card -->
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-top border-4 {% if booking.booking_status.value == 'Confirmed' %}border-success{% elif booking.booking_status.value == 'Pending' %}border-warning{% elif booking.booking_status.value == 'Cancelled' %}border-danger{% else %}border-secondary{% endif %}">
+            <div class="card-body p-4">
+                <div class="row align-items-center text-center text-md-start">
+                    <div class="col-md-3 border-end">
+                        <small class="text-muted text-uppercase d-block mb-1">Booking Status</small>
+                        <h4 class="mb-0">
+                            {% if booking.booking_status.value == 'Confirmed' %}<span class="text-success">{{ booking.booking_status.value }}</span>
+                            {% elif booking.booking_status.value == 'Pending' %}<span class="text-warning text-dark">{{ booking.booking_status.value }}</span>
+                            {% elif booking.booking_status.value == 'Cancelled' %}<span class="text-danger">{{ booking.booking_status.value }}</span>
+                            {% else %}<span class="text-secondary">{{ booking.booking_status.value }}</span>{% endif %}
+                        </h4>
+                    </div>
+                    <div class="col-md-3 border-end">
+                        <small class="text-muted text-uppercase d-block mb-1">Payment Status</small>
+                        <h4 class="mb-0">
+                            {% if booking.payment_status.value == 'Paid' %}<span class="text-success">{{ booking.payment_status.value }}</span>
+                            {% elif booking.payment_status.value == 'Pending' %}<span class="text-warning text-dark">{{ booking.payment_status.value }}</span>
+                            {% elif booking.payment_status.value == 'Refunded' %}<span class="text-info">{{ booking.payment_status.value }}</span>
+                            {% else %}<span class="text-secondary">{{ booking.payment_status.value }}</span>{% endif %}
+                        </h4>
+                    </div>
+                    <div class="col-md-3 border-end">
+                        <small class="text-muted text-uppercase d-block mb-1">Total Amount</small>
+                        <h4 class="mb-0">₹{{ "%.2f"|format(booking.total_amount|float) }}</h4>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted text-uppercase d-block mb-1">Booking Date</small>
+                        <h4 class="mb-0 fw-normal">{{ booking.booking_date.strftime('%d %b %Y, %H:%M') }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User & Trek Details -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-person me-2"></i>User Details</h5></div>
+            <div class="card-body">
+                {% if booking.user %}
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase d-block">Name</small>
+                    <a href="{{ url_for('admin.user_view', user_id=booking.user.id) }}" class="fs-5 text-decoration-none fw-semibold">{{ booking.user.name }}</a>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase d-block">Email</small>
+                    <span class="fs-6">{{ booking.user.email }}</span>
+                </div>
+                <div>
+                    <small class="text-muted text-uppercase d-block">Phone</small>
+                    <span class="fs-6">{{ booking.user.phone or '—' }}</span>
+                </div>
+                {% else %}
+                <div class="text-muted">User information not available.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-mountain me-2"></i>Trek Details</h5></div>
+            <div class="card-body">
+                {% if booking.trek %}
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase d-block">Trek Name</small>
+                    <a href="{{ url_for('admin.trek_view', trek_id=booking.trek.id) }}" class="fs-5 text-decoration-none fw-semibold">{{ booking.trek.trek_name }}</a>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted text-uppercase d-block">Location</small>
+                    <span class="fs-6"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ booking.trek.location }}</span>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted text-uppercase d-block">Dates</small>
+                        <span>{{ booking.trek.start_date.strftime('%d %b') }} - {{ booking.trek.end_date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted text-uppercase d-block">Participants</small>
+                        <span class="fs-5 fw-semibold">{{ booking.participants }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-muted">Trek information not available.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Actions -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-gear me-2"></i>Administrative Actions</h5></div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin.booking_update_status', booking_id=booking.id) }}" class="row align-items-end g-3">
+                    <div class="col-md-4">
+                        <label class="form-label text-muted text-uppercase small">Update Booking Status</label>
+                        <select name="booking_status" class="form-select">
+                            <option value="Pending" {% if booking.booking_status.value == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Confirmed" {% if booking.booking_status.value == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                            <option value="Cancelled" {% if booking.booking_status.value == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                            <option value="Completed" {% if booking.booking_status.value == 'Completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Update</button>
+                    </div>
+                    <div class="col-md-6 form-text text-muted mb-2">
+                        Updating status manually here bypasses normal slot inventory management. Use with caution.
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

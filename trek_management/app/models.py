@@ -109,6 +109,7 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.TREKKER)
     phone = Column(String(20), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    is_blacklisted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
     # ---- Relationships ----
