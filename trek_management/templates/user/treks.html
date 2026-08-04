@@ -1,0 +1,129 @@
+{% extends 'user_base.html' %}
+{% block title %}Available Treks{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title"><i class="bi bi-mountain me-2"></i>Available Treks</h1>
+        <p class="section-subtitle mb-0">Discover and book your next adventure</p>
+    </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card content-card shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="{{ url_for('user.available_treks') }}" id="trek-filter-form">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted">Search</label>
+                    <input type="text" name="q" class="form-control user-search-bar" placeholder="Search by name or location…" value="{{ q }}" id="trek-search-input">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted">Difficulty</label>
+                    <select name="difficulty" class="form-select" id="filter-difficulty">
+                        <option value="">All</option>
+                        {% for d in difficulties %}
+                        <option value="{{ d.value }}" {% if difficulty_filter == d.value %}selected{% endif %}>{{ d.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-semibold text-muted">Location</label>
+                    <select name="location" class="form-select" id="filter-location">
+                        <option value="">All</option>
+                        {% for loc in locations %}
+                        <option value="{{ loc }}" {% if location_filter == loc %}selected{% endif %}>{{ loc }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-semibold text-muted">Min ₹</label>
+                    <input type="number" name="price_min" class="form-control" placeholder="0" value="{{ price_min }}" min="0" id="filter-price-min">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small fw-semibold text-muted">Max ₹</label>
+                    <input type="number" name="price_max" class="form-control" placeholder="Any" value="{{ price_max }}" min="0" id="filter-price-max">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-success w-100" id="filter-btn"><i class="bi bi-funnel me-1"></i>Filter</button>
+                </div>
+                {% if q or difficulty_filter or location_filter or price_min or price_max %}
+                <div class="col-md-1">
+                    <a href="{{ url_for('user.available_treks') }}" class="btn btn-outline-secondary w-100"><i class="bi bi-x-lg"></i></a>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Trek Grid -->
+{% if treks %}
+<div class="row g-3">
+    {% for trek in treks %}
+    <div class="col-xl-4 col-md-6">
+        <div class="card trek-card h-100">
+            <div class="trek-card-accent"></div>
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="trek-name mb-0">{{ trek.trek_name }}</h5>
+                    {% if trek.difficulty.value == 'Easy' %}<span class="badge bg-success badge-status">Easy</span>
+                    {% elif trek.difficulty.value == 'Moderate' %}<span class="badge bg-warning text-dark badge-status">Moderate</span>
+                    {% elif trek.difficulty.value == 'Hard' %}<span class="badge bg-danger badge-status">Hard</span>
+                    {% else %}<span class="badge bg-dark badge-status">Expert</span>{% endif %}
+                </div>
+
+                <div class="trek-meta mb-2">
+                    <i class="bi bi-geo-alt text-danger me-1"></i>{{ trek.location }}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <span class="trek-meta"><i class="bi bi-calendar3 me-1"></i>{{ trek.start_date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <div class="col-6">
+                        <span class="trek-meta"><i class="bi bi-clock me-1"></i>{{ trek.duration_days }} days</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="trek-price">₹{{ "%.0f"|format(trek.price|float) }}</span>
+                    <span class="trek-meta">
+                        <i class="bi bi-people me-1"></i>
+                        <span class="{% if trek.available_slots == 0 %}text-danger fw-bold{% elif trek.available_slots <= 5 %}text-warning fw-bold{% else %}text-success{% endif %}">
+                            {{ trek.available_slots }}
+                        </span> slots
+                    </span>
+                </div>
+
+                <div class="mt-auto d-flex gap-2">
+                    <a href="{{ url_for('user.trek_detail', trek_id=trek.id) }}" class="btn btn-outline-success btn-sm flex-fill">
+                        <i class="bi bi-eye me-1"></i>Details
+                    </a>
+                    {% if trek.available_slots > 0 %}
+                    <a href="{{ url_for('user.trek_detail', trek_id=trek.id) }}#book" class="btn btn-success btn-sm flex-fill">
+                        <i class="bi bi-bookmark-plus me-1"></i>Book
+                    </a>
+                    {% else %}
+                    <button class="btn btn-secondary btn-sm flex-fill" disabled>Full</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card content-card shadow-sm">
+    <div class="empty-state">
+        <i class="bi bi-mountain d-block mb-2"></i>
+        <p class="mb-1">No treks found matching your criteria.</p>
+        {% if q or difficulty_filter or location_filter or price_min or price_max %}
+        <a href="{{ url_for('user.available_treks') }}" class="btn btn-sm btn-success mt-2">Clear Filters</a>
+        {% else %}
+        <small class="text-muted">Check back later for new treks!</small>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'user_base.html' %}
+{% block title %}Trekking History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title"><i class="bi bi-clock-history me-2"></i>Trekking History</h1>
+        <p class="section-subtitle mb-0">Review your past adventures and completed treks</p>
+    </div>
+</div>
+
+<div class="card content-card shadow-sm">
+    <div class="card-body p-0">
+        {% if history %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="history-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Trek Name</th>
+                        <th>Location</th>
+                        <th>Difficulty</th>
+                        <th>Booking Date</th>
+                        <th>Final Trek Status</th>
+                        <th>Booking Status</th>
+                        <th>Payment Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in history %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('user.trek_detail', trek_id=b.trek_id) }}" class="text-decoration-none fw-semibold">
+                                {{ b.trek.trek_name }}
+                            </a>
+                        </td>
+                        <td class="text-muted">{{ b.trek.location }}</td>
+                        <td>
+                            {% if b.trek.difficulty.value == 'Easy' %}<span class="badge bg-success badge-status">Easy</span>
+                            {% elif b.trek.difficulty.value == 'Moderate' %}<span class="badge bg-warning text-dark badge-status">Moderate</span>
+                            {% elif b.trek.difficulty.value == 'Hard' %}<span class="badge bg-danger badge-status">Hard</span>
+                            {% else %}<span class="badge bg-dark badge-status">Expert</span>{% endif %}
+                        </td>
+                        <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                        <td>
+                            {% if b.trek.status.value == 'Completed' %}<span class="badge bg-secondary badge-status">Completed</span>
+                            {% elif b.trek.status.value == 'Cancelled' %}<span class="badge bg-danger badge-status">Cancelled</span>
+                            {% else %}<span class="badge bg-info badge-status">{{ b.trek.status.value }}</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success badge-status">Confirmed</span>
+                            {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-success badge-status">Completed</span>
+                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger badge-status">Cancelled</span>
+                            {% else %}<span class="badge bg-secondary badge-status">{{ b.booking_status.value }}</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success badge-status">Paid</span>
+                            {% elif b.payment_status.value == 'Refunded' %}<span class="badge bg-info badge-status">Refunded</span>
+                            {% else %}<span class="badge bg-secondary badge-status">{{ b.payment_status.value }}</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clock d-block mb-2"></i>
+            <p class="mb-1">Your trekking history is empty.</p>
+            <small class="text-muted">Once you complete a trek, it will show up here.</small>
+            <br>
+            <a href="{{ url_for('user.available_treks') }}" class="btn btn-sm btn-success mt-3">Start Exploring</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

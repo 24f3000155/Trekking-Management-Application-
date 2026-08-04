@@ -1,0 +1,310 @@
+/* ── User / Trekker Dashboard Layout ── */
+/* Consistent with staff.css / admin.css design system */
+/* Accent: emerald-green (#2ecc71 family) to differentiate from Staff (blue) */
+
+body {
+    overflow-x: hidden;
+    background: #f0f2f5;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 240px;
+    padding-top: 1rem;
+    overflow-y: auto;
+    z-index: 1030;
+    border-right: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, #0b3d2e 0%, #145239 100%);
+}
+
+.sidebar .nav-link {
+    padding: .75rem 1.4rem;
+    font-size: .9rem;
+    border-radius: 0;
+    transition: all .2s ease;
+    color: rgba(255,255,255,.7);
+    border-left: 3px solid transparent;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    border-left-color: rgba(46,204,113,.5);
+}
+
+.sidebar .nav-link.active {
+    background: rgba(46,204,113,.15);
+    color: #2ecc71;
+    border-left-color: #2ecc71;
+    font-weight: 600;
+}
+
+.sidebar .nav-link i {
+    width: 24px;
+    text-align: center;
+    margin-right: .6rem;
+    font-size: 1.05rem;
+}
+
+.sidebar .sidebar-section {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,.35);
+    padding: 1rem 1.4rem .4rem;
+    font-weight: 600;
+}
+
+/* ── Main content offset ── */
+.main-content {
+    margin-left: 240px;
+    margin-top: 56px;
+    padding: 1.8rem 2.2rem;
+    min-height: calc(100vh - 56px);
+}
+
+/* ── Top Navbar ── */
+.user-navbar {
+    background: linear-gradient(90deg, #0b3d2e 0%, #145239 100%) !important;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.user-navbar .navbar-brand {
+    font-weight: 700;
+    letter-spacing: .5px;
+}
+
+.user-navbar .brand-icon {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: .5rem;
+}
+
+/* ── Stat cards ── */
+.stat-card {
+    border: none;
+    border-radius: 14px;
+    transition: transform .2s ease, box-shadow .2s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 14px 14px 0 0;
+}
+
+.stat-card.card-green::before  { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+.stat-card.card-blue::before   { background: linear-gradient(90deg, #3498db, #2980b9); }
+.stat-card.card-purple::before { background: linear-gradient(90deg, #8e44ad, #9b59b6); }
+.stat-card.card-orange::before { background: linear-gradient(90deg, #e67e22, #f39c12); }
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,.12);
+}
+
+.stat-card .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-card .stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -.5px;
+}
+
+.stat-card .stat-label {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* ── Table styling ── */
+.table th {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6c757d;
+    border-bottom-width: 2px;
+    font-weight: 600;
+}
+.table td { vertical-align: middle; }
+
+/* ── Section heading ── */
+.section-title {
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin-bottom: .2rem;
+}
+.section-subtitle {
+    color: #6c757d;
+    font-size: .9rem;
+}
+
+/* ── Content cards ── */
+.content-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+.content-card .card-header {
+    background: #fff;
+    border-bottom: 1px solid rgba(0,0,0,.06);
+    border-radius: 14px 14px 0 0 !important;
+    padding: 1rem 1.2rem;
+}
+
+/* ── Search bar ── */
+.user-search-bar {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: border-color .2s;
+    padding: .5rem 1rem;
+}
+.user-search-bar:focus {
+    border-color: #2ecc71;
+    box-shadow: 0 0 0 3px rgba(46,204,113,.15);
+}
+
+/* ── Badges ── */
+.badge-status {
+    font-size: .78rem;
+    padding: .35em .7em;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+/* ── Info grid (trek detail) ── */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.2rem;
+}
+.info-item {
+    padding: .8rem 1rem;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+.info-item .info-label {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #6c757d;
+    margin-bottom: .25rem;
+    font-weight: 600;
+}
+.info-item .info-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* ── Trek browse cards ── */
+.trek-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    transition: transform .2s ease, box-shadow .2s ease;
+    overflow: hidden;
+}
+.trek-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,.12);
+}
+.trek-card .trek-card-accent {
+    height: 4px;
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+}
+.trek-card .card-body { padding: 1.2rem; }
+.trek-card .trek-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #2c3e50;
+}
+.trek-card .trek-meta {
+    font-size: .85rem;
+    color: #6c757d;
+}
+.trek-card .trek-price {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #27ae60;
+}
+
+/* ── Profile card ── */
+.profile-header {
+    background: linear-gradient(135deg, #0b3d2e 0%, #145239 100%);
+    border-radius: 14px 14px 0 0;
+    padding: 2rem;
+    color: #fff;
+}
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    font-weight: 700;
+    border: 3px solid rgba(255,255,255,.2);
+}
+
+/* ── Action buttons ── */
+.btn-action {
+    padding: .3rem .6rem;
+    font-size: .8rem;
+    border-radius: 6px;
+}
+
+/* ── Empty state ── */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #6c757d;
+}
+.empty-state .bi {
+    font-size: 3rem;
+    opacity: .3;
+}
+
+/* ── Responsive ── */
+@media (max-width: 992px) {
+    .sidebar { width: 70px; }
+    .sidebar .nav-link span { display: none; }
+    .sidebar .sidebar-section { display: none; }
+    .sidebar .nav-link i { font-size: 1.2rem; margin: 0; }
+    .sidebar .nav-link { text-align: center; padding: .75rem .5rem; justify-content: center; }
+    .main-content { margin-left: 70px; padding: 1.2rem; }
+}
+
+@media (max-width: 576px) {
+    .stat-card .stat-value { font-size: 1.6rem; }
+    .info-grid { grid-template-columns: 1fr; }
+}
