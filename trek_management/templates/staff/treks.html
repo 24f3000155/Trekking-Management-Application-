@@ -1,0 +1,142 @@
+{% extends 'staff_base.html' %}
+
+{% block title %}My Treks{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title"><i class="bi bi-mountain me-2"></i>My Assigned Treks</h1>
+        <p class="section-subtitle mb-0">Manage treks assigned to you</p>
+    </div>
+</div>
+
+<!-- Search Bar -->
+<div class="card content-card shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="{{ url_for('staff.my_treks') }}" class="row g-2 align-items-end" id="treks-search-form">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control staff-search-bar"
+                       placeholder="Search by name, location, or difficulty..."
+                       value="{{ q }}" id="treks-search-input">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select" id="treks-status-filter">
+                    <option value="">All Statuses</option>
+                    <option value="Upcoming" {% if status_filter == 'Upcoming' %}selected{% endif %}>Upcoming</option>
+                    <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+                    <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100" id="treks-search-btn">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+            {% if q or status_filter %}
+            <div class="col-md-2">
+                <a href="{{ url_for('staff.my_treks') }}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-x-lg me-1"></i>Clear
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Treks Table -->
+<div class="card content-card shadow-sm">
+    <div class="card-body p-0">
+        {% if treks %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="my-treks-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Trek Name</th>
+                        <th>Location</th>
+                        <th>Difficulty</th>
+                        <th>Duration</th>
+                        <th>Available Slots</th>
+                        <th>Status</th>
+                        <th>Participants</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trek in treks %}
+                    <tr>
+                        <td><span class="text-muted">#{{ trek.id }}</span></td>
+                        <td>
+                            <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}" class="text-decoration-none fw-semibold">
+                                {{ trek.trek_name }}
+                            </a>
+                        </td>
+                        <td>{{ trek.location }}</td>
+                        <td>
+                            {% if trek.difficulty.value == 'Easy' %}
+                                <span class="badge bg-success badge-status">{{ trek.difficulty.value }}</span>
+                            {% elif trek.difficulty.value == 'Moderate' %}
+                                <span class="badge bg-warning text-dark badge-status">{{ trek.difficulty.value }}</span>
+                            {% elif trek.difficulty.value == 'Hard' %}
+                                <span class="badge bg-danger badge-status">{{ trek.difficulty.value }}</span>
+                            {% else %}
+                                <span class="badge bg-dark badge-status">{{ trek.difficulty.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ trek.duration_days }} days</td>
+                        <td>
+                            <span class="fw-semibold {% if trek.available_slots == 0 %}text-danger{% elif trek.available_slots <= 5 %}text-warning{% else %}text-success{% endif %}">
+                                {{ trek.available_slots }}
+                            </span>
+                            <span class="text-muted">/ {{ trek.total_slots }}</span>
+                        </td>
+                        <td>
+                            {% if trek.status.value == 'Upcoming' %}
+                                <span class="badge bg-primary badge-status">{{ trek.status.value }}</span>
+                            {% elif trek.status.value == 'Active' %}
+                                <span class="badge bg-success badge-status">{{ trek.status.value }}</span>
+                            {% elif trek.status.value == 'Completed' %}
+                                <span class="badge bg-secondary badge-status">{{ trek.status.value }}</span>
+                            {% elif trek.status.value == 'Cancelled' %}
+                                <span class="badge bg-danger badge-status">{{ trek.status.value }}</span>
+                            {% else %}
+                                <span class="badge bg-info badge-status">{{ trek.status.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-semibold">{{ trek.participant_count }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}" 
+                                   class="btn btn-sm btn-outline-primary btn-action" title="View Details" id="view-trek-{{ trek.id }}">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if trek.status.value != 'Completed' and trek.status.value != 'Cancelled' %}
+                                <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}#update" 
+                                   class="btn btn-sm btn-outline-warning btn-action" title="Update Trek" id="update-trek-{{ trek.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{{ url_for('staff.trek_participants', trek_id=trek.id) }}" 
+                                   class="btn btn-sm btn-outline-success btn-action" title="View Participants" id="participants-trek-{{ trek.id }}">
+                                    <i class="bi bi-people"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-mountain d-block mb-2"></i>
+            <p class="mb-1">No treks found.</p>
+            <small class="text-muted">{% if q or status_filter %}Try adjusting your search criteria.{% else %}You don't have any treks assigned yet.{% endif %}</small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
