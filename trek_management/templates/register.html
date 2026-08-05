@@ -6,7 +6,7 @@
         <div class="card shadow-sm mt-4">
             <div class="card-body p-5">
                 <h2 class="text-center mb-4">Trekker Registration</h2>
-                <form method="POST" action="{{ url_for('auth.register') }}">
+                <form method="POST" class="needs-validation" action="{{ url_for('auth.register') }}" novalidate>
                     <div class="mb-3">
                         <label for="name" class="form-label">Full Name</label>
                         <input type="text" class="form-control" id="name" name="name" value="{{ name|default('') }}" required>
@@ -17,11 +17,11 @@
                     </div>
                     <div class="mb-3">
                         <label for="phone" class="form-label">Phone</label>
-                        <input type="text" class="form-control" id="phone" name="phone" value="{{ phone|default('') }}">
+                        <input type="tel" class="form-control phone-input" id="phone" name="phone" value="{{ phone|default('') }}">
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <input type="password" class="form-control password-strength" id="password" name="password" required>
                     </div>
                     <div class="mb-4">
                         <label for="confirm_password" class="form-label">Confirm Password</label>

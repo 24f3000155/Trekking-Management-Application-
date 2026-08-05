@@ -56,6 +56,48 @@
     </div>
 </div>
 
+<!-- Charts Section -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-12">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Participants per Trek</h5>
+                <button class="btn btn-sm btn-light p-1" onclick="loadStaffCharts()" title="Refresh Charts"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="participantsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Booking Status</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="bookingStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-person-check me-2"></i>Attendance Summary</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <div class="card content-card shadow-sm h-100">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-map me-2"></i>My Recent Treks</h5>
@@ -104,4 +146,16 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadStaffCharts() {
+        chartManager.renderChart('participantsChart', '/api/charts/staff/trek-participants', 'bar');
+        chartManager.renderChart('bookingStatusChart', '/api/charts/staff/booking-status', 'pie');
+        chartManager.renderChart('attendanceChart', '/api/charts/staff/attendance', 'doughnut');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStaffCharts);
+</script>
 {% endblock %}

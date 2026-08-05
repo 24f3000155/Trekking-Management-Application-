@@ -10,7 +10,7 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <form method="POST" action="{{ url_for('admin.trek_edit', trek_id=trek.id) if trek else url_for('admin.trek_create') }}">
+        <form method="POST" class="needs-validation" action="{{ url_for('admin.trek_edit', trek_id=trek.id) if trek else url_for('admin.trek_create') }}" novalidate>
             <div class="row g-3">
                 <div class="col-md-8">
                     <label for="trek_name" class="form-label fw-semibold">Trek Name <span class="text-danger">*</span></label>

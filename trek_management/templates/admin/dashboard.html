@@ -118,6 +118,59 @@
     </div>
 </div>
 
+<!-- Charts Section -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Monthly Bookings</h5>
+                <button class="btn btn-sm btn-light p-1" onclick="loadAdminCharts()" title="Refresh Charts"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="monthlyBookingsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Booking Status</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="bookingStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Difficulty Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="difficultyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-steps me-2"></i>Popular Locations</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="locationsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Recent Bookings -->
     <div class="col-lg-8">
@@ -193,4 +246,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function loadAdminCharts() {
+        chartManager.renderChart('monthlyBookingsChart', '/api/charts/admin/monthly-bookings', 'line');
+        chartManager.renderChart('bookingStatusChart', '/api/charts/admin/booking-status', 'doughnut');
+        chartManager.renderChart('difficultyChart', '/api/charts/admin/difficulty-distribution', 'bar');
+        chartManager.renderChart('locationsChart', '/api/charts/admin/popular-locations', 'bar', {
+            indexAxis: 'y'
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadAdminCharts);
+</script>
 {% endblock %}
