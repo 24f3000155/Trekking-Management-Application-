@@ -7,12 +7,17 @@ Tables:
     - treks
     - bookings
     - trek_staff_assignments
+    - attendance
+    - feedback
+    - certificates
+    - audit_logs
 
 All enums use Python's built-in `enum.Enum` and are stored as strings
 in SQLite for readability and portability.
 """
 
 import enum
+import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
@@ -20,6 +25,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -53,27 +59,27 @@ class Difficulty(str, enum.Enum):
 
 
 class TrekStatus(str, enum.Enum):
-    """Lifecycle status of a trek."""
-    UPCOMING = "Upcoming"
-    ACTIVE = "Active"
+    """
+    Lifecycle status of a trek.
+
+    Pending → Approved → Open → Closed → Completed
+    """
+    PENDING = "Pending"
+    APPROVED = "Approved"
+    OPEN = "Open"
+    CLOSED = "Closed"
     COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
 
 
 class BookingStatus(str, enum.Enum):
-    """Status of a booking."""
-    PENDING = "Pending"
-    CONFIRMED = "Confirmed"
+    """
+    Status of a booking.
+
+    Booked → Cancelled  OR  Booked → Completed
+    """
+    BOOKED = "Booked"
     CANCELLED = "Cancelled"
     COMPLETED = "Completed"
-
-
-class PaymentStatus(str, enum.Enum):
-    """Payment status for a booking."""
-    PENDING = "Pending"
-    PAID = "Paid"
-    FAILED = "Failed"
-    REFUNDED = "Refunded"
 
 
 class ApprovalStatus(str, enum.Enum):
@@ -81,6 +87,13 @@ class ApprovalStatus(str, enum.Enum):
     PENDING = "Pending"
     APPROVED = "Approved"
     REJECTED = "Rejected"
+
+
+class AttendanceStatus(str, enum.Enum):
+    """Attendance status for participants."""
+    PRESENT = "Present"
+    ABSENT = "Absent"
+    NOT_MARKED = "Not Marked"
 
 
 # ──────────────────────────────────────────────
@@ -125,6 +138,11 @@ class User(Base):
         uselist=False,  # one-to-one
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    created_treks = relationship(
+        "Trek",
+        back_populates="creator",
+        foreign_keys="Trek.created_by",
     )
 
     def __repr__(self):
@@ -173,6 +191,8 @@ class StaffProfile(Base):
 class Trek(Base):
     """
     Represents a trek that trekkers can book and staff can be assigned to.
+
+    Lifecycle: Pending → Approved → Open → Closed → Completed
     """
     __tablename__ = "treks"
     __table_args__ = (
@@ -192,13 +212,17 @@ class Trek(Base):
     duration_days = Column(Integer, nullable=False)
     total_slots = Column(Integer, nullable=False)
     available_slots = Column(Integer, nullable=False)
-    price = Column(Numeric(10, 2), nullable=False)  # Money-safe storage
+    price = Column(Numeric(10, 2), nullable=False)
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
-    status = Column(Enum(TrekStatus), nullable=False, default=TrekStatus.UPCOMING)
+    booking_deadline = Column(DateTime, nullable=True)
+    status = Column(Enum(TrekStatus), nullable=False, default=TrekStatus.PENDING)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     # ---- Relationships ----
+    creator = relationship("User", back_populates="created_treks", foreign_keys=[created_by])
     bookings = relationship(
         "Booking",
         back_populates="trek",
@@ -245,7 +269,7 @@ class Booking(Base):
     """
     Represents a trekker's booking for a specific trek.
 
-    User 1:N Booking, Trek 1:N Booking.
+    Lifecycle: Booked → Cancelled  OR  Booked → Completed
     """
     __tablename__ = "bookings"
     __table_args__ = (
@@ -265,18 +289,44 @@ class Booking(Base):
         nullable=False,
     )
     booking_status = Column(
-        Enum(BookingStatus), nullable=False, default=BookingStatus.PENDING
+        Enum(BookingStatus), nullable=False, default=BookingStatus.BOOKED
     )
     booking_date = Column(DateTime, default=_utcnow, nullable=False)
-    payment_status = Column(
-        Enum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING
+    completion_date = Column(DateTime, nullable=True)
+    cancelled_date = Column(DateTime, nullable=True)
+    staff_id = Column(
+        Integer,
+        ForeignKey("staff_profiles.id", ondelete="SET NULL"),
+        nullable=True,
     )
     participants = Column(Integer, nullable=False, default=1)
     total_amount = Column(Numeric(12, 2), nullable=False, default=0)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     # ---- Relationships ----
     user = relationship("User", back_populates="bookings")
     trek = relationship("Trek", back_populates="bookings")
+    assigned_staff = relationship("StaffProfile", foreign_keys=[staff_id])
+    attendance = relationship(
+        "Attendance",
+        back_populates="booking",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    feedback = relationship(
+        "Feedback",
+        back_populates="booking",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    certificate = relationship(
+        "Certificate",
+        back_populates="booking",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     # ---- Validators ----
     @validates("participants")
@@ -302,9 +352,6 @@ class TrekStaffAssignment(Base):
     """
     Junction table implementing the many-to-many relationship
     between Treks and StaffProfiles.
-
-    A unique constraint on (trek_id, staff_id) prevents duplicate
-    assignments.
     """
     __tablename__ = "trek_staff_assignments"
     __table_args__ = (
@@ -332,4 +379,128 @@ class TrekStaffAssignment(Base):
         return (
             f"<TrekStaffAssignment(trek_id={self.trek_id}, "
             f"staff_id={self.staff_id})>"
+        )
+
+
+class Attendance(Base):
+    """
+    Tracks attendance for a booking/participant on a trek.
+    One-to-one with Booking.
+    """
+    __tablename__ = "attendance"
+    __table_args__ = (
+        UniqueConstraint("booking_id", name="uq_attendance_booking"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(
+        Integer,
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    status = Column(
+        Enum(AttendanceStatus),
+        nullable=False,
+        default=AttendanceStatus.NOT_MARKED,
+    )
+    marked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    marked_at = Column(DateTime, nullable=True)
+    remarks = Column(Text, nullable=True)
+
+    # ---- Relationships ----
+    booking = relationship("Booking", back_populates="attendance")
+
+    def __repr__(self):
+        return f"<Attendance(booking_id={self.booking_id}, status={self.status.value})>"
+
+
+class Feedback(Base):
+    """
+    User feedback for a completed booking/trek.
+    One-to-one with Booking.
+    """
+    __tablename__ = "feedback"
+    __table_args__ = (
+        UniqueConstraint("booking_id", name="uq_feedback_booking"),
+        CheckConstraint("rating >= 1 AND rating <= 5", name="ck_feedback_rating_range"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(
+        Integer,
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    rating = Column(Integer, nullable=False)
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    # ---- Relationships ----
+    booking = relationship("Booking", back_populates="feedback")
+
+    @validates("rating")
+    def _validate_rating(self, key, value):
+        if value is not None and (value < 1 or value > 5):
+            raise ValueError("rating must be between 1 and 5")
+        return value
+
+    def __repr__(self):
+        return f"<Feedback(booking_id={self.booking_id}, rating={self.rating})>"
+
+
+class Certificate(Base):
+    """
+    Certificate record for a completed trek booking.
+    One-to-one with Booking.
+    """
+    __tablename__ = "certificates"
+    __table_args__ = (
+        UniqueConstraint("booking_id", name="uq_certificate_booking"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(
+        Integer,
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    certificate_uid = Column(String(64), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    issued_date = Column(DateTime, default=_utcnow, nullable=False)
+
+    # ---- Relationships ----
+    booking = relationship("Booking", back_populates="certificate")
+
+    def __repr__(self):
+        return f"<Certificate(booking_id={self.booking_id}, uid={self.certificate_uid})>"
+
+
+class AuditLog(Base):
+    """
+    Immutable audit log for tracking every status change.
+
+    Records who changed what, when, and the old/new values.
+    This table is append-only — records are never updated or deleted.
+    """
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_type = Column(String(50), nullable=False)  # 'trek' or 'booking'
+    entity_id = Column(Integer, nullable=False)
+    action = Column(String(100), nullable=False)  # e.g. 'status_change', 'created', 'cancelled'
+    old_value = Column(String(200), nullable=True)
+    new_value = Column(String(200), nullable=True)
+    performed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    performed_at = Column(DateTime, default=_utcnow, nullable=False)
+    details = Column(Text, nullable=True)
+
+    # ---- Relationships ----
+    performer = relationship("User", foreign_keys=[performed_by])
+
+    def __repr__(self):
+        return (
+            f"<AuditLog(entity={self.entity_type}:{self.entity_id}, "
+            f"action={self.action})>"
         )

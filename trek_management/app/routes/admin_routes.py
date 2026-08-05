@@ -1,6 +1,7 @@
 """
 Admin routes: Full dashboard with Trek CRUD, Staff management,
-User management, Booking management, Staff Assignment, and Search.
+User management, Booking management, Staff Assignment, Search,
+Trek History, Booking History, and Audit Log.
 
 Every route is protected by @require_role(UserRole.ADMIN).
 """
@@ -20,11 +21,14 @@ from app.database import SessionLocal
 from app.models import (
     User, UserRole, StaffProfile, ApprovalStatus,
     Trek, TrekStatus, Difficulty,
-    Booking, BookingStatus, PaymentStatus,
-    TrekStaffAssignment,
+    Booking, BookingStatus,
+    TrekStaffAssignment, AuditLog, Feedback, Certificate,
 )
 from app.auth import require_role, get_current_user
 from app.security import hash_password
+from app.services.trek_service import advance_trek_status, get_allowed_transitions, TrekStatusError
+from app.services.booking_service import cancel_booking, complete_booking, BookingError
+from app.services.audit_service import log_action
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -40,29 +44,43 @@ def dashboard():
     db = SessionLocal()
     try:
         stats = {
-            "total_treks": db.query(func.count(Trek.id)).scalar(),
-            "total_users": db.query(func.count(User.id)).filter(User.role == UserRole.TREKKER).scalar(),
-            "total_staff": db.query(func.count(User.id)).filter(User.role == UserRole.TREK_STAFF).scalar(),
-            "total_bookings": db.query(func.count(Booking.id)).scalar(),
+            "total_treks": db.query(func.count(Trek.id)).scalar() or 0,
+            "total_users": db.query(func.count(User.id)).filter(User.role == UserRole.TREKKER).scalar() or 0,
+            "total_staff": db.query(func.count(User.id)).filter(User.role == UserRole.TREK_STAFF).scalar() or 0,
+            "total_bookings": db.query(func.count(Booking.id)).scalar() or 0,
             "pending_staff": db.query(func.count(StaffProfile.id)).filter(
-                StaffProfile.approval_status == ApprovalStatus.PENDING).scalar(),
-            "active_treks": db.query(func.count(Trek.id)).filter(
-                Trek.status.in_([TrekStatus.UPCOMING, TrekStatus.ACTIVE])).scalar(),
-            "confirmed_bookings": db.query(func.count(Booking.id)).filter(
-                Booking.booking_status == BookingStatus.CONFIRMED).scalar(),
+                StaffProfile.approval_status == ApprovalStatus.PENDING).scalar() or 0,
+            "open_treks": db.query(func.count(Trek.id)).filter(Trek.status == TrekStatus.OPEN).scalar() or 0,
+            "closed_treks": db.query(func.count(Trek.id)).filter(Trek.status == TrekStatus.CLOSED).scalar() or 0,
+            "completed_treks": db.query(func.count(Trek.id)).filter(Trek.status == TrekStatus.COMPLETED).scalar() or 0,
+            "booked_bookings": db.query(func.count(Booking.id)).filter(
+                Booking.booking_status == BookingStatus.BOOKED).scalar() or 0,
+            "completed_bookings": db.query(func.count(Booking.id)).filter(
+                Booking.booking_status == BookingStatus.COMPLETED).scalar() or 0,
+            "cancelled_bookings": db.query(func.count(Booking.id)).filter(
+                Booking.booking_status == BookingStatus.CANCELLED).scalar() or 0,
             "total_revenue": db.query(func.coalesce(func.sum(Booking.total_amount), 0)).filter(
-                Booking.payment_status == PaymentStatus.PAID).scalar(),
+                Booking.booking_status.in_([BookingStatus.BOOKED, BookingStatus.COMPLETED])).scalar() or 0,
         }
-        # Recent bookings
+
         recent_bookings = (
             db.query(Booking)
             .options(joinedload(Booking.user), joinedload(Booking.trek))
             .order_by(Booking.booking_date.desc())
             .limit(5).all()
         )
+
+        recent_activities = (
+            db.query(AuditLog)
+            .options(joinedload(AuditLog.performer))
+            .order_by(AuditLog.performed_at.desc())
+            .limit(10).all()
+        )
+
         return render_template("admin/dashboard.html",
                                user=user, stats=stats,
-                               recent_bookings=recent_bookings)
+                               recent_bookings=recent_bookings,
+                               recent_activities=recent_activities)
     finally:
         db.close()
 
@@ -78,15 +96,25 @@ def treks():
     db = SessionLocal()
     try:
         q = request.args.get("q", "").strip()
+        status_filter = request.args.get("status", "").strip()
         query = db.query(Trek).options(joinedload(Trek.staff_assignments))
+
         if q:
             query = query.filter(or_(
                 Trek.trek_name.ilike(f"%{q}%"),
                 Trek.location.ilike(f"%{q}%"),
             ))
+        if status_filter:
+            try:
+                status_enum = TrekStatus(status_filter)
+                query = query.filter(Trek.status == status_enum)
+            except (ValueError, KeyError):
+                pass
+
         trek_list = query.order_by(Trek.created_at.desc()).all()
         return render_template("admin/treks.html",
-                               user=user, treks=trek_list, q=q)
+                               user=user, treks=trek_list, q=q,
+                               status_filter=status_filter, trek_statuses=TrekStatus)
     finally:
         db.close()
 
@@ -96,7 +124,7 @@ def treks():
 def trek_create():
     user = get_current_user()
     if request.method == "POST":
-        return _trek_save(None)
+        return _trek_save(None, user)
     return render_template("admin/trek_form.html", user=user,
                            trek=None, difficulties=Difficulty,
                            statuses=TrekStatus, action="Create")
@@ -107,7 +135,7 @@ def trek_create():
 def trek_edit(trek_id):
     user = get_current_user()
     if request.method == "POST":
-        return _trek_save(trek_id)
+        return _trek_save(trek_id, user)
     db = SessionLocal()
     try:
         trek = db.query(Trek).filter(Trek.id == trek_id).first()
@@ -137,9 +165,51 @@ def trek_view(trek_id):
         if not trek:
             flash("Trek not found.", "danger")
             return redirect(url_for("admin.treks"))
-        return render_template("admin/trek_view.html", user=user, trek=trek)
+
+        allowed_transitions = get_allowed_transitions(trek.status)
+
+        audit_trail = (
+            db.query(AuditLog)
+            .options(joinedload(AuditLog.performer))
+            .filter(AuditLog.entity_type == "trek", AuditLog.entity_id == trek_id)
+            .order_by(AuditLog.performed_at.desc())
+            .all()
+        )
+
+        return render_template("admin/trek_view.html", user=user, trek=trek,
+                               allowed_transitions=allowed_transitions,
+                               audit_trail=audit_trail)
     finally:
         db.close()
+
+
+@admin_bp.route("/treks/<int:trek_id>/update-status", methods=["POST"])
+@require_role(UserRole.ADMIN)
+def trek_update_status(trek_id):
+    """Admin trek status update using state machine."""
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        new_status_value = request.form.get("status", "")
+        try:
+            new_status = TrekStatus(new_status_value)
+        except (ValueError, KeyError):
+            flash("Invalid trek status.", "danger")
+            return redirect(url_for("admin.trek_view", trek_id=trek_id))
+
+        try:
+            advance_trek_status(db=db, trek_id=trek_id, new_status=new_status, performed_by=user.id)
+            db.commit()
+            flash(f"Trek status updated to {new_status.value}.", "success")
+        except TrekStatusError as e:
+            db.rollback()
+            flash(str(e), "danger")
+    except Exception:
+        db.rollback()
+        flash("Error updating trek status.", "danger")
+    finally:
+        db.close()
+    return redirect(url_for("admin.trek_view", trek_id=trek_id))
 
 
 @admin_bp.route("/treks/<int:trek_id>/delete", methods=["POST"])
@@ -151,14 +221,13 @@ def trek_delete(trek_id):
         if not trek:
             flash("Trek not found.", "danger")
             return redirect(url_for("admin.treks"))
-        active_bookings = db.query(Booking).filter(
-            Booking.trek_id == trek_id,
-            Booking.booking_status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
-        ).count()
-        if active_bookings > 0:
-            flash(f"Cannot delete trek — {active_bookings} active booking(s) exist. "
-                  "Cancel them first.", "warning")
+
+        # Only delete if NO bookings exist at all
+        booking_count = db.query(Booking).filter(Booking.trek_id == trek_id).count()
+        if booking_count > 0:
+            flash(f"Cannot delete trek — {booking_count} booking(s) exist.", "warning")
             return redirect(url_for("admin.trek_view", trek_id=trek_id))
+
         db.delete(trek)
         db.commit()
         flash("Trek deleted successfully.", "success")
@@ -170,7 +239,7 @@ def trek_delete(trek_id):
     return redirect(url_for("admin.treks"))
 
 
-def _trek_save(trek_id):
+def _trek_save(trek_id, current_user=None):
     """Shared create/edit logic for treks."""
     errors = []
     f = request.form
@@ -185,27 +254,25 @@ def _trek_save(trek_id):
     start_date = f.get("start_date", "")
     end_date = f.get("end_date", "")
     status = f.get("status", "")
+    booking_deadline = f.get("booking_deadline", "")
 
     if not trek_name:
         errors.append("Trek name is required.")
     if not location:
         errors.append("Location is required.")
 
-    # Validate difficulty
     try:
         difficulty_enum = Difficulty(difficulty)
     except (ValueError, KeyError):
         errors.append("Invalid difficulty level.")
         difficulty_enum = Difficulty.MODERATE
 
-    # Validate status
     try:
         status_enum = TrekStatus(status)
     except (ValueError, KeyError):
         errors.append("Invalid trek status.")
-        status_enum = TrekStatus.UPCOMING
+        status_enum = TrekStatus.PENDING
 
-    # Numeric validation
     try:
         dur = int(duration_days)
         if dur <= 0:
@@ -241,7 +308,6 @@ def _trek_save(trek_id):
         errors.append("Price must be a valid number.")
         pr = Decimal("0")
 
-    # Dates
     try:
         sd = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
@@ -256,6 +322,13 @@ def _trek_save(trek_id):
 
     if ed < sd:
         errors.append("End date must be on or after start date.")
+
+    bd = None
+    if booking_deadline:
+        try:
+            bd = datetime.strptime(booking_deadline, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            errors.append("Booking deadline must be a valid date (YYYY-MM-DD).")
 
     if errors:
         for e in errors:
@@ -274,6 +347,7 @@ def _trek_save(trek_id):
                 return redirect(url_for("admin.treks"))
         else:
             trek = Trek()
+            trek.created_by = current_user.id if current_user else None
             db.add(trek)
 
         trek.trek_name = trek_name
@@ -287,6 +361,22 @@ def _trek_save(trek_id):
         trek.start_date = sd
         trek.end_date = ed
         trek.status = status_enum
+        trek.booking_deadline = bd
+
+        db.flush()
+
+        # Audit log
+        if not trek_id:
+            log_action(
+                db=db,
+                entity_type="trek",
+                entity_id=trek.id,
+                action="created",
+                new_value=status_enum.value,
+                performed_by=current_user.id if current_user else None,
+                details=f"Trek '{trek_name}' created with status {status_enum.value}",
+            )
+
         db.commit()
         flash(f"Trek {'updated' if trek_id else 'created'} successfully.", "success")
         return redirect(url_for("admin.treks"))
@@ -503,16 +593,15 @@ def staff_delete(user_id):
         if not su:
             flash("Staff not found.", "danger")
             return redirect(url_for("admin.staff_list"))
-        # Check for future trek assignments
         profile = db.query(StaffProfile).filter(StaffProfile.user_id == user_id).first()
         if profile:
             future = (db.query(TrekStaffAssignment)
                       .join(Trek)
                       .filter(TrekStaffAssignment.staff_id == profile.id,
-                              Trek.status.in_([TrekStatus.UPCOMING, TrekStatus.ACTIVE]))
+                              Trek.status.in_([TrekStatus.OPEN, TrekStatus.APPROVED, TrekStatus.PENDING]))
                       .count())
             if future > 0:
-                flash(f"Cannot delete — staff is assigned to {future} active/upcoming trek(s). "
+                flash(f"Cannot delete — staff is assigned to {future} active trek(s). "
                       "Remove assignments first or deactivate instead.", "warning")
                 return redirect(url_for("admin.staff_view", user_id=user_id))
         db.delete(su)
@@ -667,16 +756,27 @@ def bookings():
     db = SessionLocal()
     try:
         q = request.args.get("q", "").strip()
+        status_filter = request.args.get("status", "").strip()
         query = (db.query(Booking)
                  .options(joinedload(Booking.user), joinedload(Booking.trek)))
+
         if q:
             query = query.join(User).join(Trek).filter(or_(
                 User.name.ilike(f"%{q}%"),
                 Trek.trek_name.ilike(f"%{q}%"),
             ))
+
+        if status_filter:
+            try:
+                bs = BookingStatus(status_filter)
+                query = query.filter(Booking.booking_status == bs)
+            except ValueError:
+                pass
+
         all_bookings = query.order_by(Booking.booking_date.desc()).all()
         return render_template("admin/bookings.html",
-                               user=user, bookings=all_bookings, q=q)
+                               user=user, bookings=all_bookings, q=q,
+                               status_filter=status_filter, booking_statuses=BookingStatus)
     finally:
         db.close()
 
@@ -688,13 +788,28 @@ def booking_view(booking_id):
     db = SessionLocal()
     try:
         booking = (db.query(Booking)
-                   .options(joinedload(Booking.user), joinedload(Booking.trek))
+                   .options(
+                       joinedload(Booking.user),
+                       joinedload(Booking.trek),
+                       joinedload(Booking.feedback),
+                       joinedload(Booking.certificate),
+                       joinedload(Booking.attendance),
+                   )
                    .filter(Booking.id == booking_id).first())
         if not booking:
             flash("Booking not found.", "danger")
             return redirect(url_for("admin.bookings"))
+
+        audit_trail = (
+            db.query(AuditLog)
+            .options(joinedload(AuditLog.performer))
+            .filter(AuditLog.entity_type == "booking", AuditLog.entity_id == booking_id)
+            .order_by(AuditLog.performed_at.desc())
+            .all()
+        )
+
         return render_template("admin/booking_view.html",
-                               user=user, booking=booking)
+                               user=user, booking=booking, audit_trail=audit_trail)
     finally:
         db.close()
 
@@ -702,27 +817,16 @@ def booking_view(booking_id):
 @admin_bp.route("/bookings/<int:booking_id>/cancel", methods=["POST"])
 @require_role(UserRole.ADMIN)
 def booking_cancel(booking_id):
+    user = get_current_user()
     db = SessionLocal()
     try:
-        booking = db.query(Booking).filter(Booking.id == booking_id).first()
-        if not booking:
-            flash("Booking not found.", "danger")
-            return redirect(url_for("admin.bookings"))
-        if booking.booking_status == BookingStatus.CANCELLED:
-            flash("Booking is already cancelled.", "info")
-            return redirect(url_for("admin.bookings"))
-
-        was_confirmed = booking.booking_status == BookingStatus.CONFIRMED
-        booking.booking_status = BookingStatus.CANCELLED
-        booking.payment_status = PaymentStatus.REFUNDED
-
-        if was_confirmed:
-            trek = db.query(Trek).filter(Trek.id == booking.trek_id).first()
-            if trek:
-                trek.available_slots += booking.participants
-
-        db.commit()
-        flash("Booking cancelled and slots restored.", "success")
+        try:
+            cancel_booking(db=db, booking_id=booking_id, performed_by=user.id, check_trek_started=False)
+            db.commit()
+            flash("Booking cancelled.", "success")
+        except BookingError as e:
+            db.rollback()
+            flash(str(e), "danger")
     except Exception:
         db.rollback()
         flash("Error cancelling booking.", "danger")
@@ -731,30 +835,99 @@ def booking_cancel(booking_id):
     return redirect(request.referrer or url_for("admin.bookings"))
 
 
-@admin_bp.route("/bookings/<int:booking_id>/update-status", methods=["POST"])
+@admin_bp.route("/bookings/<int:booking_id>/complete", methods=["POST"])
 @require_role(UserRole.ADMIN)
-def booking_update_status(booking_id):
-    new_status = request.form.get("booking_status", "")
+def booking_complete(booking_id):
+    user = get_current_user()
     db = SessionLocal()
     try:
-        booking = db.query(Booking).filter(Booking.id == booking_id).first()
-        if not booking:
-            flash("Booking not found.", "danger")
-            return redirect(url_for("admin.bookings"))
         try:
-            new_status_enum = BookingStatus(new_status)
-        except (ValueError, KeyError):
-            flash("Invalid booking status.", "danger")
-            return redirect(url_for("admin.booking_view", booking_id=booking_id))
-        booking.booking_status = new_status_enum
-        db.commit()
-        flash(f"Booking status updated to {new_status_enum.value}.", "success")
+            complete_booking(db=db, booking_id=booking_id, performed_by=user.id)
+            db.commit()
+            flash("Booking marked as Completed.", "success")
+        except BookingError as e:
+            db.rollback()
+            flash(str(e), "danger")
     except Exception:
         db.rollback()
-        flash("Error updating booking status.", "danger")
+        flash("Error completing booking.", "danger")
     finally:
         db.close()
-    return redirect(url_for("admin.booking_view", booking_id=booking_id))
+    return redirect(request.referrer or url_for("admin.bookings"))
+
+
+# ─────────────────────────────────────────────
+# Trek History
+# ─────────────────────────────────────────────
+
+@admin_bp.route("/trek-history")
+@require_role(UserRole.ADMIN)
+def trek_history():
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        treks = (
+            db.query(Trek)
+            .filter(Trek.status.in_([TrekStatus.COMPLETED, TrekStatus.CLOSED]))
+            .order_by(Trek.end_date.desc())
+            .all()
+        )
+
+        for trek in treks:
+            trek.booking_count = db.query(func.count(Booking.id)).filter(Booking.trek_id == trek.id).scalar() or 0
+            trek.completed_count = db.query(func.count(Booking.id)).filter(
+                Booking.trek_id == trek.id,
+                Booking.booking_status == BookingStatus.COMPLETED
+            ).scalar() or 0
+
+        return render_template("admin/trek_history.html", user=user, treks=treks)
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────
+# Booking History
+# ─────────────────────────────────────────────
+
+@admin_bp.route("/booking-history")
+@require_role(UserRole.ADMIN)
+def booking_history():
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        q = request.args.get("q", "").strip()
+        status_filter = request.args.get("status", "").strip()
+
+        query = (
+            db.query(Booking)
+            .options(
+                joinedload(Booking.user),
+                joinedload(Booking.trek),
+                joinedload(Booking.feedback),
+                joinedload(Booking.certificate),
+            )
+        )
+
+        if q:
+            query = query.join(User).join(Trek).filter(or_(
+                User.name.ilike(f"%{q}%"),
+                Trek.trek_name.ilike(f"%{q}%"),
+            ))
+
+        if status_filter:
+            try:
+                bs = BookingStatus(status_filter)
+                query = query.filter(Booking.booking_status == bs)
+            except ValueError:
+                pass
+
+        all_bookings = query.order_by(Booking.booking_date.desc()).all()
+
+        return render_template("admin/booking_history.html",
+                               user=user, bookings=all_bookings, q=q,
+                               status_filter=status_filter, booking_statuses=BookingStatus)
+    finally:
+        db.close()
 
 
 # ─────────────────────────────────────────────
@@ -771,7 +944,7 @@ def assignments():
                  .options(joinedload(Trek.staff_assignments)
                           .joinedload(TrekStaffAssignment.staff)
                           .joinedload(StaffProfile.user))
-                 .filter(Trek.status.in_([TrekStatus.UPCOMING, TrekStatus.ACTIVE]))
+                 .filter(Trek.status.in_([TrekStatus.PENDING, TrekStatus.APPROVED, TrekStatus.OPEN]))
                  .order_by(Trek.start_date).all())
         approved_staff = (db.query(StaffProfile)
                           .options(joinedload(StaffProfile.user))
@@ -884,7 +1057,7 @@ def search():
 
 
 # ─────────────────────────────────────────────
-# Legacy routes (kept for backward compatibility)
+# Legacy routes
 # ─────────────────────────────────────────────
 
 @admin_bp.route("/pending-staff")

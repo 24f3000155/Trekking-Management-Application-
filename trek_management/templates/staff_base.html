@@ -52,6 +52,12 @@
                 <i class="bi bi-people"></i> <span>Participants</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.endpoint and 'history' in request.endpoint %}active{% endif %}"
+               href="{{ url_for('staff.trek_history') }}" id="nav-history">
+                <i class="bi bi-clock-history"></i> <span>Trek History</span>
+            </a>
+        </li>
     </ul>
     <div class="sidebar-section mt-3">Account</div>
     <ul class="nav flex-column">

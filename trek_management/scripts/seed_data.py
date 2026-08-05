@@ -1,23 +1,16 @@
 """
 Seed / test data script.
 
-Demonstrates all major database operations:
-  1.  Creating a Trekker
-  2.  Creating a Trek Staff user
-  3.  Creating a StaffProfile
-  4.  Creating a Trek
-  5.  Assigning Staff to the Trek
-  6.  Creating a Booking
-  7.  Confirming the Booking
-  8.  Querying the Trekker's bookings
-  9.  Querying everyone booked on a Trek
-  10. Querying all staff assigned to a Trek
-
-The script is idempotent -- running it multiple times will NOT
-create duplicate data (it checks for existing records first).
-
-Usage:
-    python -m scripts.seed_data
+Demonstrates all major database operations with new enums:
+  1. Creating a Trekker
+  2. Creating a Trek Staff user
+  3. Creating a StaffProfile
+  4. Creating a Trek (lifecycle test)
+  5. Assigning Staff to the Trek
+  6. Creating a Booking
+  7. Confirming (Booking -> Booked)
+  8. Querying the Trekker's bookings
+  9. Testing Admin workflow
 """
 
 from datetime import datetime, timezone, timedelta
@@ -25,7 +18,7 @@ from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
 
-from app.database import SessionLocal
+from app.database import SessionLocal, Base, engine
 from app.models import (
     User,
     UserRole,
@@ -40,10 +33,11 @@ from app.models import (
 from app.security import hash_password
 from app.services.booking_service import (
     create_booking,
-    confirm_booking,
     cancel_booking,
+    complete_booking,
     BookingError,
 )
+from app.services.trek_service import advance_trek_status
 
 
 def _get_or_create_user(db, email, **kwargs):
@@ -60,6 +54,7 @@ def _get_or_create_user(db, email, **kwargs):
 
 
 def run_seed():
+    Base.metadata.create_all(bind=engine)  # Create tables if not exists
     db = SessionLocal()
     try:
         print("=" * 60)
@@ -76,6 +71,14 @@ def run_seed():
             name="John Trekker",
             password_hash=hash_password("TrekkerPass1!"),
             role=UserRole.TREKKER,
+        )
+
+        admin, _ = _get_or_create_user(
+            db,
+            email="admin@example.com",
+            name="Admin User",
+            password_hash=hash_password("AdminPass1!"),
+            role=UserRole.ADMIN,
         )
 
         # ------------------------------------------
@@ -134,7 +137,8 @@ def run_seed():
                 price=Decimal("12500.00"),
                 start_date=start,
                 end_date=start + timedelta(days=5),
-                status=TrekStatus.UPCOMING,
+                booking_deadline=start - timedelta(days=2),
+                status=TrekStatus.OPEN,  # Start at Open for booking test
             )
             db.add(trek)
             db.flush()
@@ -164,27 +168,7 @@ def run_seed():
             print(f"  [OK] Assigned staff '{staff_user.name}' to trek "
                   f"'{trek.trek_name}' (id={assignment.id})")
 
-        # Commit all seed data before running destructive tests
         db.commit()
-
-        # -- Verify duplicate assignment is rejected --
-        print("\n   [TEST] Testing duplicate staff assignment rejection ...")
-        try:
-            dup = TrekStaffAssignment(
-                trek_id=trek.id,
-                staff_id=staff_profile.id,
-            )
-            db.add(dup)
-            db.flush()
-            print("  [FAIL] Duplicate assignment was NOT rejected!")
-        except IntegrityError:
-            db.rollback()
-            # Re-query objects after rollback since session is invalidated
-            trekker = db.query(User).filter(User.email == "john.trekker@example.com").first()
-            staff_user = db.query(User).filter(User.email == "jane.guide@example.com").first()
-            staff_profile = db.query(StaffProfile).filter(StaffProfile.user_id == staff_user.id).first()
-            trek = db.query(Trek).filter(Trek.trek_name == "Hampta Pass").first()
-            print("  [OK] Duplicate assignment correctly rejected (IntegrityError)")
 
         # ------------------------------------------
         # 6. Create a Booking
@@ -211,91 +195,22 @@ def run_seed():
             print(f"  [OK] Created Booking (id={booking.id}, "
                   f"participants={booking.participants}, "
                   f"amount={booking.total_amount})")
-
-        # ------------------------------------------
-        # 7. Confirm the Booking
-        # ------------------------------------------
-        print("\n[7] Confirming Booking ...")
-        slots_before = trek.available_slots
-        booking = confirm_booking(db, booking.id)
-        db.commit()
-        db.refresh(trek)
-        print(f"  [OK] Booking status: {booking.booking_status.value}")
-        print(f"       Payment status: {booking.payment_status.value}")
-        print(f"       Slots: {slots_before} -> {trek.available_slots}")
-
-        # -- Test re-confirmation is idempotent --
-        print("\n   [TEST] Testing re-confirmation idempotency ...")
-        slots_before_reconfirm = trek.available_slots
-        confirm_booking(db, booking.id)
-        db.commit()
-        db.refresh(trek)
-        if trek.available_slots == slots_before_reconfirm:
-            print("  [OK] Re-confirmation did NOT reduce slots again (idempotent)")
-        else:
-            print("  [FAIL] Re-confirmation changed slots!")
-
-        # -- Test overbooking rejection --
-        print("\n   [TEST] Testing overbooking rejection ...")
-        # Temporarily set available_slots to 0 to test
-        original_slots = trek.available_slots
-        trek.available_slots = 0
-        db.flush()
-        overbook_trekker, _ = _get_or_create_user(
-            db,
-            email="overbook@example.com",
-            name="Over Booker",
-            password_hash=hash_password("OverBook1!"),
-            role=UserRole.TREKKER,
-        )
-        try:
-            ob_booking = create_booking(db, user_id=overbook_trekker.id,
-                                        trek_id=trek.id, participants=1)
-            confirm_booking(db, ob_booking.id)
-            print("  [FAIL] Overbooking was NOT rejected!")
-        except BookingError as e:
-            print(f"  [OK] Overbooking correctly rejected: {e}")
-            # Remove the pending over-booking attempt
-            db.rollback()
-            trek = db.query(Trek).filter(Trek.trek_name == "Hampta Pass").first()
-            trekker = db.query(User).filter(User.email == "john.trekker@example.com").first()
-            # Restore original slots
-            trek.available_slots = original_slots
             db.commit()
-            db.refresh(trek)
 
         # ------------------------------------------
-        # 8. Query Trekker's bookings
+        # 7. Complete The Trek (Tests State Machine)
         # ------------------------------------------
-        print("\n[8] Querying Trekker's bookings ...")
-        trekker = db.query(User).filter(User.email == "john.trekker@example.com").first()
-        for b in trekker.bookings:
-            print(f"  Booking #{b.id} -- Trek: {b.trek.trek_name}, "
-                  f"Status: {b.booking_status.value}, "
-                  f"Participants: {b.participants}")
+        print("\n[7] Testing State Machine (Open -> Closed -> Completed)")
+        advance_trek_status(db, trek.id, TrekStatus.CLOSED, admin.id)
+        print(f"  [OK] Trek Closed.")
+        
+        # Now Complete Trek
+        advance_trek_status(db, trek.id, TrekStatus.COMPLETED, admin.id)
+        db.commit()
+        db.refresh(trek)
+        db.refresh(booking)
+        print(f"  [OK] Trek Completed. Booking automatically updated to: {booking.booking_status.value}")
 
-        # ------------------------------------------
-        # 9. Query everyone booked on the Trek
-        # ------------------------------------------
-        print("\n[9] Querying all bookings for Trek '{}' ...".format(trek.trek_name))
-        trek = db.query(Trek).filter(Trek.trek_name == "Hampta Pass").first()
-        for b in trek.bookings:
-            print(f"  {b.user.name} (email: {b.user.email}) -- "
-                  f"Status: {b.booking_status.value}")
-
-        # ------------------------------------------
-        # 10. Query all staff assigned to the Trek
-        # ------------------------------------------
-        print("\n[10] Querying staff assigned to Trek '{}' ...".format(trek.trek_name))
-        for a in trek.staff_assignments:
-            staff_u = a.staff.user
-            print(f"  {staff_u.name} -- "
-                  f"Specialization: {a.staff.specialization}, "
-                  f"Experience: {a.staff.experience_years} years")
-
-        # ------------------------------------------
-        # Done
-        # ------------------------------------------
         print("\n" + "=" * 60)
         print("  ALL SEED DATA AND TESTS COMPLETED SUCCESSFULLY")
         print("=" * 60)

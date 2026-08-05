@@ -61,6 +61,16 @@
                     <i class="bi bi-diagram-3"></i> Staff Assignments
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if 'history' in request.endpoint and 'trek' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.trek_history') }}">
+                    <i class="bi bi-archive"></i> Trek History
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white {% if 'history' in request.endpoint and 'booking' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.booking_history') }}">
+                    <i class="bi bi-clock-history"></i> Booking History
+                </a>
+            </li>
             <li class="nav-item mt-3">
                 <a class="nav-link text-white {% if 'search' in request.endpoint %}active{% endif %}" href="{{ url_for('admin.search') }}">
                     <i class="bi bi-search"></i> Search

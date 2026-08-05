@@ -21,31 +21,29 @@
     {% endif %}
 </div>
 
-<!-- Search Bar -->
+<!-- Search Bar & Filters -->
 <div class="card content-card shadow-sm mb-4">
     <div class="card-body py-3">
-        {% if trek %}
-        <form method="GET" action="{{ url_for('staff.trek_participants', trek_id=trek.id) }}" class="row g-2 align-items-end" id="participants-search-form">
-        {% else %}
-        <form method="GET" action="{{ url_for('staff.participants') }}" class="row g-2 align-items-end" id="participants-search-form">
-        {% endif %}
-            <div class="col-md-6">
-                <input type="text" name="q" class="form-control staff-search-bar"
-                       placeholder="Search by name, email, or booking ID..."
-                       value="{{ q }}" id="participants-search-input">
+        <form method="GET" action="{% if trek %}{{ url_for('staff.trek_participants', trek_id=trek.id) }}{% else %}{{ url_for('staff.participants') }}{% endif %}" class="row g-2 align-items-end" id="participants-search-form">
+            <div class="col-md-5">
+                <label class="form-label small text-muted">Search User</label>
+                <input type="text" name="q" class="form-control staff-search-bar" placeholder="Name or email..." value="{{ q }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Status</label>
+                <select name="status" class="form-select staff-search-bar">
+                    <option value="">All Statuses</option>
+                    <option value="Booked" {% if status_filter == 'Booked' %}selected{% endif %}>Booked</option>
+                    <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100" id="participants-search-btn">
-                    <i class="bi bi-search me-1"></i>Search
-                </button>
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i>Search</button>
             </div>
-            {% if q %}
+            {% if q or status_filter %}
             <div class="col-md-2">
-                {% if trek %}
-                <a href="{{ url_for('staff.trek_participants', trek_id=trek.id) }}" class="btn btn-outline-secondary w-100">
-                {% else %}
-                <a href="{{ url_for('staff.participants') }}" class="btn btn-outline-secondary w-100">
-                {% endif %}
+                <a href="{% if trek %}{{ url_for('staff.trek_participants', trek_id=trek.id) }}{% else %}{{ url_for('staff.participants') }}{% endif %}" class="btn btn-outline-secondary w-100">
                     <i class="bi bi-x-lg me-1"></i>Clear
                 </a>
             </div>
@@ -56,32 +54,34 @@
 
 <!-- Participants Table -->
 <div class="card content-card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold">Participant List</span>
+        {% if trek %}
+        <a href="{{ url_for('staff.export_participants', trek_id=trek.id) }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-download me-1"></i>Export CSV
+        </a>
+        {% endif %}
+    </div>
     <div class="card-body p-0">
         {% if bookings %}
         <div class="table-responsive">
-            <table class="table table-hover mb-0" id="participants-table">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Booking ID</th>
-                        <th>User Name</th>
-                        <th>Email</th>
+                        <th>Trekker / Email</th>
                         <th>Phone</th>
-                        {% if not trek %}
-                        <th>Trek</th>
-                        {% endif %}
-                        <th>Participants</th>
+                        {% if not trek %}<th>Trek</th>{% endif %}
+                        <th>Slots</th>
                         <th>Booking Status</th>
-                        <th>Payment Status</th>
-                        <th>Booking Date</th>
+                        <th>Attendance</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for b in bookings %}
                     <tr>
-                        <td><span class="text-muted">#{{ b.id }}</span></td>
-                        <td class="fw-semibold">{{ b.user.name }}</td>
                         <td>
-                            <a href="mailto:{{ b.user.email }}" class="text-decoration-none">{{ b.user.email }}</a>
+                            <div class="fw-semibold">{{ b.user.name }}</div>
+                            <small class="text-muted"><a href="mailto:{{ b.user.email }}">{{ b.user.email }}</a></small>
                         </td>
                         <td>{{ b.user.phone or 'N/A' }}</td>
                         {% if not trek %}
@@ -91,43 +91,34 @@
                             </a>
                         </td>
                         {% endif %}
-                        <td class="fw-semibold">{{ b.participants }}</td>
+                        <td class="fw-bold">{{ b.participants }}</td>
                         <td>
-                            {% if b.booking_status.value == 'Confirmed' %}
-                                <span class="badge bg-success badge-status">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Pending' %}
-                                <span class="badge bg-warning text-dark badge-status">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Cancelled' %}
-                                <span class="badge bg-danger badge-status">{{ b.booking_status.value }}</span>
-                            {% else %}
-                                <span class="badge bg-secondary badge-status">{{ b.booking_status.value }}</span>
+                            {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary">Booked</span>
+                            {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
+                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">Cancelled</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if b.payment_status.value == 'Paid' %}
-                                <span class="badge bg-success badge-status">{{ b.payment_status.value }}</span>
-                            {% elif b.payment_status.value == 'Pending' %}
-                                <span class="badge bg-warning text-dark badge-status">{{ b.payment_status.value }}</span>
-                            {% elif b.payment_status.value == 'Refunded' %}
-                                <span class="badge bg-info badge-status">{{ b.payment_status.value }}</span>
+                            {% if b.attendance and b.attendance.status.value == 'Present' %}
+                                <span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Present</span>
+                            {% elif b.attendance and b.attendance.status.value == 'Absent' %}
+                                <span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Absent</span>
                             {% else %}
-                                <span class="badge bg-danger badge-status">{{ b.payment_status.value }}</span>
+                                <span class="badge bg-secondary">Not Marked</span>
                             {% endif %}
                         </td>
-                        <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         <div class="card-footer bg-white text-muted small py-2 px-3">
-            Showing {{ bookings|length }} booking(s)
+            Showing {{ bookings|length }} matching booking(s)
         </div>
         {% else %}
         <div class="empty-state">
             <i class="bi bi-people d-block mb-2"></i>
             <p class="mb-1">No participants found.</p>
-            <small class="text-muted">{% if q %}Try adjusting your search criteria.{% else %}No bookings exist for your assigned treks.{% endif %}</small>
         </div>
         {% endif %}
     </div>

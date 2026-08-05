@@ -48,29 +48,16 @@
                         <td>{{ t.id }}</td>
                         <td><a href="{{ url_for('admin.trek_view', trek_id=t.id) }}" class="fw-semibold text-decoration-none">{{ t.trek_name }}</a></td>
                         <td><i class="bi bi-geo-alt me-1 text-muted"></i>{{ t.location }}</td>
-                        <td>
-                            {% if t.difficulty.value == 'Easy' %}
-                                <span class="badge bg-success">{{ t.difficulty.value }}</span>
-                            {% elif t.difficulty.value == 'Moderate' %}
-                                <span class="badge bg-warning text-dark">{{ t.difficulty.value }}</span>
-                            {% elif t.difficulty.value == 'Hard' %}
-                                <span class="badge bg-danger">{{ t.difficulty.value }}</span>
-                            {% else %}
-                                <span class="badge bg-dark">{{ t.difficulty.value }}</span>
-                            {% endif %}
-                        </td>
+                        <td><span class="badge bg-dark">{{ t.difficulty.value }}</span></td>
                         <td>{{ t.duration_days }} day{{ 's' if t.duration_days > 1 }}</td>
                         <td>{{ t.available_slots }}/{{ t.total_slots }}</td>
                         <td>₹{{ "%.0f"|format(t.price|float) }}</td>
                         <td>
-                            {% if t.status.value == 'Upcoming' %}
-                                <span class="badge bg-info">{{ t.status.value }}</span>
-                            {% elif t.status.value == 'Active' %}
-                                <span class="badge bg-success">{{ t.status.value }}</span>
-                            {% elif t.status.value == 'Completed' %}
-                                <span class="badge bg-secondary">{{ t.status.value }}</span>
-                            {% else %}
-                                <span class="badge bg-danger">{{ t.status.value }}</span>
+                            {% if t.status.value == 'Pending' %}<span class="badge bg-secondary">Pending</span>
+                            {% elif t.status.value == 'Approved' %}<span class="badge bg-primary">Approved</span>
+                            {% elif t.status.value == 'Open' %}<span class="badge bg-success">Open</span>
+                            {% elif t.status.value == 'Closed' %}<span class="badge bg-warning text-dark">Closed</span>
+                            {% elif t.status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
                             {% endif %}
                         </td>
                         <td><span class="badge bg-dark bg-opacity-75">{{ t.staff_assignments|length }}</span></td>

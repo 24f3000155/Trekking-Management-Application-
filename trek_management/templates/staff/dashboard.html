@@ -1,69 +1,54 @@
 {% extends 'staff_base.html' %}
-
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="section-title"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
-        <p class="section-subtitle mb-0">Welcome back, <strong>{{ user.name }}</strong>. Here's your overview.</p>
-    </div>
-    <div>
-        <a href="{{ url_for('staff.my_treks') }}" class="btn btn-primary btn-sm">
-            <i class="bi bi-mountain me-1"></i>View My Treks
-        </a>
+        <h1 class="section-title"><i class="bi bi-speedometer2 me-2"></i>Staff Dashboard</h1>
+        <p class="section-subtitle mb-0">Welcome back, <strong>{{ user.name }}</strong></p>
     </div>
 </div>
 
-<!-- Stat Cards -->
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card card-blue shadow-sm h-100">
+        <div class="card stat-card shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                    <i class="bi bi-mountain"></i>
-                </div>
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-map"></i></div>
                 <div>
-                    <div class="stat-value text-primary" id="stat-assigned">{{ stats.assigned_treks }}</div>
+                    <div class="stat-value text-primary">{{ stats.assigned_treks }}</div>
                     <div class="stat-label">Assigned Treks</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card card-green shadow-sm h-100">
+        <div class="card stat-card shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="stat-icon bg-success bg-opacity-10 text-success">
-                    <i class="bi bi-people-fill"></i>
-                </div>
+                <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-people"></i></div>
                 <div>
-                    <div class="stat-value text-success" id="stat-trekkers">{{ stats.total_trekkers }}</div>
-                    <div class="stat-label">Registered Trekkers</div>
+                    <div class="stat-value text-success">{{ stats.total_trekkers }}</div>
+                    <div class="stat-label">Active Trekkers</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card card-orange shadow-sm h-100">
+        <div class="card stat-card shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                    <i class="bi bi-door-open"></i>
-                </div>
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-compass"></i></div>
                 <div>
-                    <div class="stat-value text-warning" id="stat-open">{{ stats.open_treks }}</div>
-                    <div class="stat-label">Open Treks</div>
+                    <div class="stat-value text-warning">{{ stats.open_treks }}</div>
+                    <div class="stat-label">Open & Approved Treks</div>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-xl-3 col-md-6">
-        <div class="card stat-card card-purple shadow-sm h-100">
+        <div class="card stat-card shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="stat-icon bg-info bg-opacity-10 text-info">
-                    <i class="bi bi-check2-circle"></i>
-                </div>
+                <div class="stat-icon bg-purple bg-opacity-10 text-purple" style="color: var(--bs-purple);"><i class="bi bi-check2-circle"></i></div>
                 <div>
-                    <div class="stat-value text-info" id="stat-completed">{{ stats.completed_treks }}</div>
+                    <div class="stat-value text-purple" style="color: var(--bs-purple);">{{ stats.completed_treks }}</div>
                     <div class="stat-label">Completed Treks</div>
                 </div>
             </div>
@@ -71,24 +56,21 @@
     </div>
 </div>
 
-<!-- Recent Assigned Treks -->
-<div class="card content-card shadow-sm mb-4">
+<div class="card content-card shadow-sm h-100">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>My Assigned Treks</h5>
+        <h5 class="mb-0"><i class="bi bi-map me-2"></i>My Recent Treks</h5>
         <a href="{{ url_for('staff.my_treks') }}" class="btn btn-sm btn-outline-primary">View All</a>
     </div>
     <div class="card-body p-0">
         {% if recent_treks %}
         <div class="table-responsive">
-            <table class="table table-hover mb-0" id="recent-treks-table">
+            <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Trek</th>
+                        <th>Trek Name</th>
+                        <th>Dates</th>
                         <th>Location</th>
-                        <th>Difficulty</th>
                         <th>Status</th>
-                        <th>Slots</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,36 +81,15 @@
                                 {{ trek.trek_name }}
                             </a>
                         </td>
-                        <td class="text-muted">{{ trek.location }}</td>
+                        <td class="text-muted">{{ trek.start_date.strftime('%d %b') }} - {{ trek.end_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ trek.location }}</td>
                         <td>
-                            {% if trek.difficulty.value == 'Easy' %}
-                                <span class="badge bg-success badge-status">{{ trek.difficulty.value }}</span>
-                            {% elif trek.difficulty.value == 'Moderate' %}
-                                <span class="badge bg-warning text-dark badge-status">{{ trek.difficulty.value }}</span>
-                            {% elif trek.difficulty.value == 'Hard' %}
-                                <span class="badge bg-danger badge-status">{{ trek.difficulty.value }}</span>
-                            {% else %}
-                                <span class="badge bg-dark badge-status">{{ trek.difficulty.value }}</span>
+                            {% if trek.status.value == 'Pending' %}<span class="badge bg-secondary badge-status">Pending</span>
+                            {% elif trek.status.value == 'Approved' %}<span class="badge bg-primary badge-status">Approved</span>
+                            {% elif trek.status.value == 'Open' %}<span class="badge bg-success badge-status">Open</span>
+                            {% elif trek.status.value == 'Closed' %}<span class="badge bg-warning text-dark badge-status">Closed</span>
+                            {% elif trek.status.value == 'Completed' %}<span class="badge bg-purple badge-status" style="background-color: var(--bs-purple);">Completed</span>
                             {% endif %}
-                        </td>
-                        <td>
-                            {% if trek.status.value == 'Upcoming' %}
-                                <span class="badge bg-primary badge-status">{{ trek.status.value }}</span>
-                            {% elif trek.status.value == 'Active' %}
-                                <span class="badge bg-success badge-status">{{ trek.status.value }}</span>
-                            {% elif trek.status.value == 'Completed' %}
-                                <span class="badge bg-secondary badge-status">{{ trek.status.value }}</span>
-                            {% elif trek.status.value == 'Cancelled' %}
-                                <span class="badge bg-danger badge-status">{{ trek.status.value }}</span>
-                            {% else %}
-                                <span class="badge bg-info badge-status">{{ trek.status.value }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ trek.available_slots }} / {{ trek.total_slots }}</td>
-                        <td>
-                            <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}" class="btn btn-sm btn-outline-primary btn-action" title="View Details">
-                                <i class="bi bi-eye"></i>
-                            </a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -137,8 +98,8 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <i class="bi bi-mountain d-block mb-2"></i>
-            <p>No treks assigned to you yet.</p>
+            <i class="bi bi-map d-block mb-2"></i>
+            <p class="mb-1">You haven't been assigned to any treks yet.</p>
         </div>
         {% endif %}
     </div>

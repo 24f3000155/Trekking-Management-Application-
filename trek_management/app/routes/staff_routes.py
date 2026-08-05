@@ -1,20 +1,22 @@
 """
-Trek Staff routes: complete dashboard, trek management, participant management,
-profile management, and search.
+Trek Staff routes: dashboard, trek management, participant management,
+profile management, attendance, booking completion, and participant export.
 
 Every route is protected by @require_approved_staff() — only APPROVED Trek Staff
 can access these routes.
 
 Assignment-level authorization is enforced for every trek-specific operation via
-the require_assigned_staff() helper, which checks that the currently logged-in
-staff member is assigned to the requested trek.
+the require_assigned_staff() helper.
 """
 
+import csv
+import io
+from datetime import datetime, timezone
 from functools import wraps
 
 from flask import (
     Blueprint, render_template, redirect, url_for,
-    flash, request, abort,
+    flash, request, abort, make_response,
 )
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
@@ -23,10 +25,12 @@ from app.database import SessionLocal
 from app.models import (
     User, UserRole, StaffProfile, ApprovalStatus,
     Trek, TrekStatus, Difficulty,
-    Booking, BookingStatus, PaymentStatus,
-    TrekStaffAssignment,
+    Booking, BookingStatus,
+    TrekStaffAssignment, Attendance, AttendanceStatus,
 )
 from app.auth import require_approved_staff, get_current_user
+from app.services.trek_service import advance_trek_status, get_allowed_transitions, TrekStatusError
+from app.services.booking_service import cancel_booking, complete_booking, BookingError
 
 staff_bp = Blueprint("staff", __name__, url_prefix="/staff")
 
@@ -36,10 +40,6 @@ staff_bp = Blueprint("staff", __name__, url_prefix="/staff")
 # ─────────────────────────────────────────────
 
 def _get_staff_profile(db, user):
-    """
-    Retrieve the StaffProfile for the given User.
-    Returns None if not found.
-    """
     return (
         db.query(StaffProfile)
         .filter(StaffProfile.user_id == user.id)
@@ -48,10 +48,6 @@ def _get_staff_profile(db, user):
 
 
 def _is_assigned_to_trek(db, staff_profile_id, trek_id):
-    """
-    Check if a staff member (by staff_profile.id) is assigned to a specific trek.
-    Returns True if assignment exists, False otherwise.
-    """
     return (
         db.query(TrekStaffAssignment)
         .filter(
@@ -63,9 +59,6 @@ def _is_assigned_to_trek(db, staff_profile_id, trek_id):
 
 
 def _get_assigned_trek_ids(db, staff_profile_id):
-    """
-    Return a list of trek IDs assigned to a staff member.
-    """
     assignments = (
         db.query(TrekStaffAssignment.trek_id)
         .filter(TrekStaffAssignment.staff_id == staff_profile_id)
@@ -75,15 +68,7 @@ def _get_assigned_trek_ids(db, staff_profile_id):
 
 
 def require_assigned_staff(f):
-    """
-    Decorator: verify that the logged-in staff member is assigned to the
-    trek specified by the 'trek_id' URL parameter.
-
-    This is the CRITICAL authorization check that prevents IDOR attacks.
-    Must be used on every route that operates on a specific trek.
-
-    Chain: Authenticated → Role==TREK_STAFF → APPROVED → Assigned to Trek
-    """
+    """Decorator: verify staff is assigned to the trek_id URL parameter."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         trek_id = kwargs.get("trek_id")
@@ -137,10 +122,8 @@ def dashboard():
             flash("Staff profile not found.", "danger")
             return redirect(url_for("auth.login"))
 
-        # Get assigned trek IDs
         assigned_ids = _get_assigned_trek_ids(db, profile.id)
 
-        # Calculate statistics dynamically
         stats = {
             "assigned_treks": len(assigned_ids),
             "total_trekkers": 0,
@@ -149,27 +132,24 @@ def dashboard():
         }
 
         if assigned_ids:
-            # Count confirmed bookings (total registered trekkers) for assigned treks
             stats["total_trekkers"] = (
                 db.query(func.coalesce(func.sum(Booking.participants), 0))
                 .filter(
                     Booking.trek_id.in_(assigned_ids),
-                    Booking.booking_status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+                    Booking.booking_status == BookingStatus.BOOKED
                 )
                 .scalar()
             ) or 0
 
-            # Count open/upcoming treks
             stats["open_treks"] = (
                 db.query(func.count(Trek.id))
                 .filter(
                     Trek.id.in_(assigned_ids),
-                    Trek.status.in_([TrekStatus.UPCOMING, TrekStatus.ACTIVE])
+                    Trek.status.in_([TrekStatus.OPEN, TrekStatus.APPROVED])
                 )
                 .scalar()
             ) or 0
 
-            # Count completed treks
             stats["completed_treks"] = (
                 db.query(func.count(Trek.id))
                 .filter(
@@ -179,7 +159,6 @@ def dashboard():
                 .scalar()
             ) or 0
 
-        # Recent assigned treks (up to 5)
         recent_treks = []
         if assigned_ids:
             recent_treks = (
@@ -221,26 +200,11 @@ def my_treks():
 
         query = db.query(Trek).filter(Trek.id.in_(assigned_ids)) if assigned_ids else db.query(Trek).filter(Trek.id == -1)
 
-        # Apply search filters
         if q:
             query = query.filter(or_(
                 Trek.trek_name.ilike(f"%{q}%"),
                 Trek.location.ilike(f"%{q}%"),
-                Trek.difficulty.ilike(f"%{q}%") if hasattr(Trek.difficulty, 'ilike') else True,
             ))
-            # Also support search by ID
-            try:
-                trek_id_search = int(q)
-                query = db.query(Trek).filter(
-                    Trek.id.in_(assigned_ids),
-                    or_(
-                        Trek.id == trek_id_search,
-                        Trek.trek_name.ilike(f"%{q}%"),
-                        Trek.location.ilike(f"%{q}%"),
-                    )
-                )
-            except (ValueError, TypeError):
-                pass
 
         if status_filter:
             try:
@@ -251,13 +215,12 @@ def my_treks():
 
         treks = query.order_by(Trek.start_date.desc()).all()
 
-        # Attach participant count to each trek
         for trek in treks:
             trek.participant_count = (
                 db.query(func.coalesce(func.sum(Booking.participants), 0))
                 .filter(
                     Booking.trek_id == trek.id,
-                    Booking.booking_status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+                    Booking.booking_status == BookingStatus.BOOKED
                 )
                 .scalar()
             ) or 0
@@ -271,17 +234,14 @@ def my_treks():
 
 
 # ─────────────────────────────────────────────
-# Trek Detail (with assignment check)
+# Trek Detail
 # ─────────────────────────────────────────────
 
 @staff_bp.route("/treks/<int:trek_id>")
 @require_approved_staff()
 @require_assigned_staff
 def trek_detail(trek_id):
-    """
-    View trek details — only if the staff member is assigned to it.
-    Includes trek info, assigned staff, participants, and update forms.
-    """
+    """View trek details with participants and management controls."""
     user = get_current_user()
     db = SessionLocal()
     try:
@@ -302,37 +262,24 @@ def trek_detail(trek_id):
             flash("Trek not found.", "danger")
             return redirect(url_for("staff.my_treks"))
 
-        # Calculate participant count (non-cancelled bookings)
         participant_count = (
             db.query(func.coalesce(func.sum(Booking.participants), 0))
             .filter(
                 Booking.trek_id == trek_id,
-                Booking.booking_status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+                Booking.booking_status == BookingStatus.BOOKED
             )
             .scalar()
         ) or 0
 
-        # Confirmed participants (for slot validation message)
-        confirmed_participants = (
-            db.query(func.coalesce(func.sum(Booking.participants), 0))
-            .filter(
-                Booking.trek_id == trek_id,
-                Booking.booking_status == BookingStatus.CONFIRMED
-            )
-            .scalar()
-        ) or 0
+        allowed_transitions = get_allowed_transitions(trek.status)
 
-        # Determine allowed status transitions
-        allowed_transitions = _get_allowed_transitions(trek.status)
-
-        # Get non-cancelled bookings for the participants list
         bookings = (
             db.query(Booking)
-            .options(joinedload(Booking.user))
-            .filter(
-                Booking.trek_id == trek_id,
-                Booking.booking_status != BookingStatus.CANCELLED
+            .options(
+                joinedload(Booking.user),
+                joinedload(Booking.attendance),
             )
+            .filter(Booking.trek_id == trek_id)
             .order_by(Booking.booking_date.desc())
             .all()
         )
@@ -341,7 +288,6 @@ def trek_detail(trek_id):
             "staff/trek_detail.html",
             user=user, trek=trek,
             participant_count=participant_count,
-            confirmed_participants=confirmed_participants,
             allowed_transitions=allowed_transitions,
             bookings=bookings,
         )
@@ -350,21 +296,55 @@ def trek_detail(trek_id):
 
 
 # ─────────────────────────────────────────────
-# Update Trek Available Slots
+# Update Trek Status
+# ─────────────────────────────────────────────
+
+@staff_bp.route("/treks/<int:trek_id>/update-status", methods=["POST"])
+@require_approved_staff()
+@require_assigned_staff
+def update_status(trek_id):
+    """Update trek status using the state machine."""
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        new_status_value = request.form.get("status", "")
+        try:
+            new_status = TrekStatus(new_status_value)
+        except (ValueError, KeyError):
+            flash("Invalid trek status.", "danger")
+            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+        try:
+            advance_trek_status(
+                db=db,
+                trek_id=trek_id,
+                new_status=new_status,
+                performed_by=user.id,
+            )
+            db.commit()
+            flash(f"Trek status updated to {new_status.value}.", "success")
+        except TrekStatusError as e:
+            db.rollback()
+            flash(str(e), "danger")
+
+    except Exception:
+        db.rollback()
+        flash("Error updating trek status.", "danger")
+    finally:
+        db.close()
+
+    return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+
+# ─────────────────────────────────────────────
+# Update Trek Slots
 # ─────────────────────────────────────────────
 
 @staff_bp.route("/treks/<int:trek_id>/update-slots", methods=["POST"])
 @require_approved_staff()
 @require_assigned_staff
 def update_slots(trek_id):
-    """
-    Update available slots for an assigned trek.
-
-    Validation:
-    - Cannot be negative
-    - Cannot exceed total_slots
-    - Cannot go below confirmed participant count
-    """
+    """Update available slots for an assigned trek."""
     db = SessionLocal()
     try:
         trek = db.query(Trek).filter(Trek.id == trek_id).first()
@@ -372,9 +352,8 @@ def update_slots(trek_id):
             flash("Trek not found.", "danger")
             return redirect(url_for("staff.my_treks"))
 
-        # Prevent updates on completed/cancelled treks
-        if trek.status in (TrekStatus.COMPLETED, TrekStatus.CANCELLED):
-            flash("Cannot update slots for a completed or cancelled trek.", "danger")
+        if trek.status in (TrekStatus.COMPLETED, TrekStatus.CLOSED):
+            flash("Cannot update slots for a completed or closed trek.", "danger")
             return redirect(url_for("staff.trek_detail", trek_id=trek_id))
 
         try:
@@ -383,34 +362,28 @@ def update_slots(trek_id):
             flash("Available slots must be a valid number.", "danger")
             return redirect(url_for("staff.trek_detail", trek_id=trek_id))
 
-        # Validation: negative
         if new_slots < 0:
             flash("Available slots cannot be negative.", "danger")
             return redirect(url_for("staff.trek_detail", trek_id=trek_id))
 
-        # Validation: exceed total
         if new_slots > trek.total_slots:
             flash(f"Available slots cannot exceed total slots ({trek.total_slots}).", "danger")
             return redirect(url_for("staff.trek_detail", trek_id=trek_id))
 
-        # Validation: cannot violate existing confirmed bookings
-        # Confirmed participants have already "occupied" slots.
-        # The max available_slots can be is: total_slots - confirmed_participants
-        # (since those slots are taken by confirmed bookings)
-        confirmed_participants = (
+        booked_participants = (
             db.query(func.coalesce(func.sum(Booking.participants), 0))
             .filter(
                 Booking.trek_id == trek_id,
-                Booking.booking_status == BookingStatus.CONFIRMED
+                Booking.booking_status == BookingStatus.BOOKED
             )
             .scalar()
         ) or 0
 
-        max_available = trek.total_slots - confirmed_participants
+        max_available = trek.total_slots - booked_participants
         if new_slots > max_available:
             flash(
                 f"Cannot set available slots to {new_slots}. "
-                f"There are {confirmed_participants} confirmed participant(s), "
+                f"There are {booked_participants} booked participant(s), "
                 f"so maximum available slots is {max_available}.",
                 "danger"
             )
@@ -429,89 +402,134 @@ def update_slots(trek_id):
 
 
 # ─────────────────────────────────────────────
-# Update Trek Status
+# Mark Attendance
 # ─────────────────────────────────────────────
 
-def _get_allowed_transitions(current_status):
-    """
-    Returns valid status transitions based on current status.
-
-    Workflow:
-      Upcoming → Active → Completed
-      Upcoming → Cancelled
-      Active → Cancelled
-
-    Extended support:
-      The 'Active' status maps to the user-requested "Open/Started/Ongoing" concept.
-      Upcoming = Open (registration open)
-      Active = Started/Ongoing
-      Completed = Completed (read-only)
-      Cancelled = Cancelled
-    """
-    transitions = {
-        TrekStatus.UPCOMING: [TrekStatus.UPCOMING, TrekStatus.ACTIVE, TrekStatus.CANCELLED],
-        TrekStatus.ACTIVE: [TrekStatus.ACTIVE, TrekStatus.COMPLETED, TrekStatus.CANCELLED],
-        TrekStatus.COMPLETED: [TrekStatus.COMPLETED],  # Read-only
-        TrekStatus.CANCELLED: [TrekStatus.CANCELLED],  # Terminal state
-    }
-    return transitions.get(current_status, [current_status])
-
-
-@staff_bp.route("/treks/<int:trek_id>/update-status", methods=["POST"])
+@staff_bp.route("/treks/<int:trek_id>/bookings/<int:booking_id>/attendance", methods=["POST"])
 @require_approved_staff()
 @require_assigned_staff
-def update_status(trek_id):
-    """
-    Update trek status with transition validation.
-
-    When a trek becomes COMPLETED:
-    - It becomes read-only (no more slot or status updates)
-    - Implicitly closes registration
-
-    When a trek goes from UPCOMING to ACTIVE:
-    - Trek has effectively started
-    """
+def mark_attendance(trek_id, booking_id):
+    """Mark attendance for a participant."""
+    user = get_current_user()
     db = SessionLocal()
     try:
-        trek = db.query(Trek).filter(Trek.id == trek_id).first()
-        if not trek:
-            flash("Trek not found.", "danger")
-            return redirect(url_for("staff.my_treks"))
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id,
+            Booking.trek_id == trek_id,
+        ).first()
 
-        new_status_value = request.form.get("status", "")
+        if not booking:
+            flash("Booking not found.", "danger")
+            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+        att_status = request.form.get("attendance_status", "")
         try:
-            new_status = TrekStatus(new_status_value)
-        except (ValueError, KeyError):
-            flash("Invalid trek status.", "danger")
+            att_enum = AttendanceStatus(att_status)
+        except ValueError:
+            flash("Invalid attendance status.", "danger")
             return redirect(url_for("staff.trek_detail", trek_id=trek_id))
 
-        # Validate transition
-        allowed = _get_allowed_transitions(trek.status)
-        if new_status not in allowed:
-            flash(
-                f"Invalid status transition: {trek.status.value} → {new_status.value}.",
-                "danger"
+        attendance = db.query(Attendance).filter(Attendance.booking_id == booking_id).first()
+        if attendance:
+            attendance.status = att_enum
+            attendance.marked_by = user.id
+            attendance.marked_at = datetime.now(timezone.utc)
+        else:
+            attendance = Attendance(
+                booking_id=booking_id,
+                status=att_enum,
+                marked_by=user.id,
+                marked_at=datetime.now(timezone.utc),
             )
-            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
-
-        # Same status = no-op
-        if new_status == trek.status:
-            flash("Status is already set to this value.", "info")
-            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
-
-        old_status = trek.status
-        trek.status = new_status
-
-        # When completing a trek, close registration (set available_slots to 0)
-        if new_status == TrekStatus.COMPLETED:
-            trek.available_slots = 0
+            db.add(attendance)
 
         db.commit()
-        flash(f"Trek status updated: {old_status.value} → {new_status.value}.", "success")
+        flash(f"Attendance marked as {att_enum.value}.", "success")
 
     except Exception:
         db.rollback()
-        flash("Error updating trek status.", "danger")
+        flash("Error marking attendance.", "danger")
+    finally:
+        db.close()
+
+    return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+
+# ─────────────────────────────────────────────
+# Complete Individual Booking
+# ─────────────────────────────────────────────
+
+@staff_bp.route("/treks/<int:trek_id>/bookings/<int:booking_id>/complete", methods=["POST"])
+@require_approved_staff()
+@require_assigned_staff
+def complete_participant(trek_id, booking_id):
+    """Mark a single participant's booking as Completed."""
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id,
+            Booking.trek_id == trek_id,
+        ).first()
+
+        if not booking:
+            flash("Booking not found.", "danger")
+            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+        try:
+            complete_booking(db=db, booking_id=booking_id, performed_by=user.id)
+            db.commit()
+            flash("Participant booking marked as Completed.", "success")
+        except BookingError as e:
+            db.rollback()
+            flash(str(e), "danger")
+
+    except Exception:
+        db.rollback()
+        flash("Error completing booking.", "danger")
+    finally:
+        db.close()
+
+    return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+
+# ─────────────────────────────────────────────
+# Cancel Participant Booking
+# ─────────────────────────────────────────────
+
+@staff_bp.route("/treks/<int:trek_id>/bookings/<int:booking_id>/cancel", methods=["POST"])
+@require_approved_staff()
+@require_assigned_staff
+def cancel_participant(trek_id, booking_id):
+    """Cancel a participant's booking (staff-initiated, no start-date check)."""
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id,
+            Booking.trek_id == trek_id,
+        ).first()
+
+        if not booking:
+            flash("Booking not found.", "danger")
+            return redirect(url_for("staff.trek_detail", trek_id=trek_id))
+
+        try:
+            cancel_booking(
+                db=db,
+                booking_id=booking_id,
+                performed_by=user.id,
+                check_trek_started=False,
+            )
+            db.commit()
+            flash("Participant booking cancelled.", "success")
+        except BookingError as e:
+            db.rollback()
+            flash(str(e), "danger")
+
+    except Exception:
+        db.rollback()
+        flash("Error cancelling booking.", "danger")
     finally:
         db.close()
 
@@ -525,10 +543,7 @@ def update_status(trek_id):
 @staff_bp.route("/participants")
 @require_approved_staff()
 def participants():
-    """
-    Show participants across ALL treks assigned to the current staff member.
-    Supports search by name, email, or booking ID.
-    """
+    """Show participants across all assigned treks."""
     user = get_current_user()
     db = SessionLocal()
     try:
@@ -539,22 +554,30 @@ def participants():
 
         assigned_ids = _get_assigned_trek_ids(db, profile.id)
         q = request.args.get("q", "").strip()
+        status_filter = request.args.get("status", "").strip()
 
         if not assigned_ids:
             return render_template(
                 "staff/participants.html",
-                user=user, bookings=[], trek=None, q=q
+                user=user, bookings=[], trek=None, q=q, status_filter=status_filter,
             )
 
         query = (
             db.query(Booking)
-            .options(joinedload(Booking.user), joinedload(Booking.trek))
+            .options(joinedload(Booking.user), joinedload(Booking.trek), joinedload(Booking.attendance))
             .filter(Booking.trek_id.in_(assigned_ids))
         )
 
+        # Status filter
+        if status_filter:
+            try:
+                bs = BookingStatus(status_filter)
+                query = query.filter(Booking.booking_status == bs)
+            except ValueError:
+                pass
+
         # Search
         if q:
-            # Try booking ID search
             try:
                 bid = int(q)
                 query = query.filter(or_(
@@ -572,7 +595,7 @@ def participants():
 
         return render_template(
             "staff/participants.html",
-            user=user, bookings=bookings, trek=None, q=q
+            user=user, bookings=bookings, trek=None, q=q, status_filter=status_filter,
         )
     finally:
         db.close()
@@ -586,10 +609,7 @@ def participants():
 @require_approved_staff()
 @require_assigned_staff
 def trek_participants(trek_id):
-    """
-    Show participants for a specific assigned trek.
-    Supports search by name, email, or booking ID.
-    """
+    """Show participants for a specific assigned trek."""
     user = get_current_user()
     db = SessionLocal()
     try:
@@ -599,14 +619,21 @@ def trek_participants(trek_id):
             return redirect(url_for("staff.my_treks"))
 
         q = request.args.get("q", "").strip()
+        status_filter = request.args.get("status", "").strip()
 
         query = (
             db.query(Booking)
-            .options(joinedload(Booking.user), joinedload(Booking.trek))
+            .options(joinedload(Booking.user), joinedload(Booking.trek), joinedload(Booking.attendance))
             .filter(Booking.trek_id == trek_id)
         )
 
-        # Search
+        if status_filter:
+            try:
+                bs = BookingStatus(status_filter)
+                query = query.filter(Booking.booking_status == bs)
+            except ValueError:
+                pass
+
         if q:
             try:
                 bid = int(q)
@@ -625,7 +652,107 @@ def trek_participants(trek_id):
 
         return render_template(
             "staff/participants.html",
-            user=user, bookings=bookings, trek=trek, q=q
+            user=user, bookings=bookings, trek=trek, q=q, status_filter=status_filter,
+        )
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────
+# Export Participants (CSV)
+# ─────────────────────────────────────────────
+
+@staff_bp.route("/treks/<int:trek_id>/export")
+@require_approved_staff()
+@require_assigned_staff
+def export_participants(trek_id):
+    """Export participant list as CSV."""
+    db = SessionLocal()
+    try:
+        trek = db.query(Trek).filter(Trek.id == trek_id).first()
+        if not trek:
+            flash("Trek not found.", "danger")
+            return redirect(url_for("staff.my_treks"))
+
+        bookings = (
+            db.query(Booking)
+            .options(joinedload(Booking.user), joinedload(Booking.attendance))
+            .filter(Booking.trek_id == trek_id)
+            .order_by(Booking.booking_date.asc())
+            .all()
+        )
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "Booking ID", "Name", "Email", "Phone",
+            "Participants", "Status", "Booking Date",
+            "Attendance",
+        ])
+
+        for b in bookings:
+            att = b.attendance.status.value if b.attendance else "Not Marked"
+            writer.writerow([
+                b.id,
+                b.user.name if b.user else "N/A",
+                b.user.email if b.user else "N/A",
+                b.user.phone if b.user and b.user.phone else "N/A",
+                b.participants,
+                b.booking_status.value,
+                b.booking_date.strftime("%Y-%m-%d %H:%M"),
+                att,
+            ])
+
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = f"attachment; filename=participants_trek_{trek_id}.csv"
+        response.headers["Content-type"] = "text/csv"
+        return response
+    finally:
+        db.close()
+
+
+# ─────────────────────────────────────────────
+# Trek History (completed assigned treks)
+# ─────────────────────────────────────────────
+
+@staff_bp.route("/history")
+@require_approved_staff()
+def trek_history():
+    """View completed assigned treks."""
+    user = get_current_user()
+    db = SessionLocal()
+    try:
+        profile = _get_staff_profile(db, user)
+        if not profile:
+            flash("Staff profile not found.", "danger")
+            return redirect(url_for("auth.login"))
+
+        assigned_ids = _get_assigned_trek_ids(db, profile.id)
+        treks = []
+        if assigned_ids:
+            treks = (
+                db.query(Trek)
+                .filter(
+                    Trek.id.in_(assigned_ids),
+                    Trek.status == TrekStatus.COMPLETED,
+                )
+                .order_by(Trek.end_date.desc())
+                .all()
+            )
+
+            for trek in treks:
+                trek.participant_count = (
+                    db.query(func.coalesce(func.sum(Booking.participants), 0))
+                    .filter(
+                        Booking.trek_id == trek.id,
+                        Booking.booking_status.in_([BookingStatus.BOOKED, BookingStatus.COMPLETED])
+                    )
+                    .scalar()
+                ) or 0
+
+        return render_template(
+            "staff/trek_history.html",
+            user=user, treks=treks,
         )
     finally:
         db.close()
@@ -658,28 +785,10 @@ def profile():
 @staff_bp.route("/profile/update", methods=["POST"])
 @require_approved_staff()
 def profile_update():
-    """
-    Update staff profile — only allowed fields.
-
-    Staff can update:
-    - Phone
-    - Emergency Contact
-    - Bio
-    - Experience Years
-    - Specialization
-    - Certification
-
-    Staff CANNOT update:
-    - Role
-    - Approval status
-    - Account status
-    - Email (identity)
-    - Name (identity)
-    """
+    """Update staff profile — only allowed fields."""
     user = get_current_user()
     db = SessionLocal()
     try:
-        # Re-query user and profile in this session
         db_user = db.query(User).filter(User.id == user.id).first()
         if not db_user:
             flash("User not found.", "danger")
@@ -694,7 +803,6 @@ def profile_update():
             flash("Staff profile not found.", "danger")
             return redirect(url_for("auth.login"))
 
-        # Update allowed fields ONLY
         phone = request.form.get("phone", "").strip()
         emergency_contact = request.form.get("emergency_contact", "").strip()
         bio = request.form.get("bio", "").strip()
@@ -702,7 +810,6 @@ def profile_update():
         certification = request.form.get("certification", "").strip()
         experience_years = request.form.get("experience_years", "0").strip()
 
-        # Validate experience years
         try:
             exp = int(experience_years)
             if exp < 0:
@@ -715,7 +822,6 @@ def profile_update():
             flash("Experience years must be a number.", "danger")
             return redirect(url_for("staff.profile"))
 
-        # Apply updates
         db_user.phone = phone if phone else None
         staff_profile.emergency_contact = emergency_contact if emergency_contact else None
         staff_profile.bio = bio if bio else None

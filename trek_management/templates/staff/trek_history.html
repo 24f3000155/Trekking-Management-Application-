@@ -1,0 +1,60 @@
+{% extends 'staff_base.html' %}
+{% block title %}Trek History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title"><i class="bi bi-clock-history me-2"></i>Trek History</h1>
+        <p class="section-subtitle mb-0">View your completed and closed treks</p>
+    </div>
+</div>
+
+<div class="card content-card shadow-sm mb-4">
+    <div class="card-body p-0">
+        {% if treks %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Trek Name</th>
+                        <th>Location</th>
+                        <th>Difficulty</th>
+                        <th>Dates</th>
+                        <th>Total Participants</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trek in treks %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}" class="text-decoration-none fw-semibold">
+                                {{ trek.trek_name }}
+                            </a>
+                        </td>
+                        <td class="text-muted">{{ trek.location }}</td>
+                        <td>
+                            {% if trek.difficulty.value == 'Easy' %}<span class="badge bg-success badge-status">Easy</span>
+                            {% elif trek.difficulty.value == 'Moderate' %}<span class="badge bg-warning text-dark badge-status">Moderate</span>
+                            {% elif trek.difficulty.value == 'Hard' %}<span class="badge bg-danger badge-status">Hard</span>
+                            {% else %}<span class="badge bg-dark badge-status">Expert</span>{% endif %}
+                        </td>
+                        <td><small>{{ trek.start_date.strftime('%d %b %Y') }} to {{ trek.end_date.strftime('%d %b %Y') }}</small></td>
+                        <td>{{ trek.participant_count }}</td>
+                        <td>
+                            <a href="{{ url_for('staff.trek_detail', trek_id=trek.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-clock d-block mb-2"></i>
+            <p class="mb-1">You have no completed treks yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

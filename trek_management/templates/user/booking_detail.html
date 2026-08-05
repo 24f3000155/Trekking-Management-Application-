@@ -1,0 +1,169 @@
+{% extends 'user_base.html' %}
+{% block title %}Booking Details #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="section-title"><i class="bi bi-file-earmark-text me-2"></i>Booking #{{ booking.id }}</h1>
+        <p class="section-subtitle mb-0">For <strong>{{ booking.trek.trek_name }}</strong></p>
+    </div>
+    <a href="{{ url_for('user.my_bookings') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back to Bookings
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Trek Details -->
+        <div class="card content-card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Trek Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Trek Name</small>
+                        <strong>{{ booking.trek.trek_name }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Trek Status</small>
+                        {% if booking.trek.status.value == 'Pending' %}<span class="badge bg-secondary">{{ booking.trek.status.value }}</span>
+                        {% elif booking.trek.status.value == 'Approved' %}<span class="badge bg-primary">{{ booking.trek.status.value }}</span>
+                        {% elif booking.trek.status.value == 'Open' %}<span class="badge bg-success">{{ booking.trek.status.value }}</span>
+                        {% elif booking.trek.status.value == 'Closed' %}<span class="badge bg-warning text-dark">{{ booking.trek.status.value }}</span>
+                        {% elif booking.trek.status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">{{ booking.trek.status.value }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Location</small>
+                        <span>{{ booking.trek.location }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Difficulty</small>
+                        <span>{{ booking.trek.difficulty.value }}</span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Dates</small>
+                        <span>{{ booking.trek.start_date.strftime('%d %b %Y') }} to {{ booking.trek.end_date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted d-block text-uppercase">Duration</small>
+                        <span>{{ booking.trek.duration_days }} Days</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Section -->
+        {% if booking.booking_status.value == 'Completed' %}
+        <div class="card content-card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-star me-2"></i>Feedback</h5>
+            </div>
+            <div class="card-body">
+                {% if booking.feedback %}
+                <div class="p-3 bg-light rounded border">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="text-warning fs-5 me-2">
+                            {% for i in range(booking.feedback.rating) %}★{% endfor %}
+                            {% for i in range(5 - booking.feedback.rating) %}☆{% endfor %}
+                        </div>
+                        <small class="text-muted">Given on {{ booking.feedback.created_at.strftime('%d %b %Y') }}</small>
+                    </div>
+                    <p class="mb-0 text-muted fst-italic">"{{ booking.feedback.comment or 'No comment provided.' }}"</p>
+                </div>
+                {% else %}
+                <form action="{{ url_for('user.submit_feedback', booking_id=booking.id) }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Rate your experience</label>
+                        <select name="rating" class="form-select" required>
+                            <option value="">Select Rating...</option>
+                            <option value="5">★★★★★ - Excellent</option>
+                            <option value="4">★★★★☆ - Very Good</option>
+                            <option value="3">★★★☆☆ - Good</option>
+                            <option value="2">★★☆☆☆ - Fair</option>
+                            <option value="1">★☆☆☆☆ - Poor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Comments (Optional)</label>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Submit Feedback</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Booking Overview -->
+        <div class="card content-card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Booking Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Status</span>
+                    <span>
+                        {% if booking.booking_status.value == 'Booked' %}<span class="badge bg-primary">Booked</span>
+                        {% elif booking.booking_status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
+                        {% elif booking.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Participants</span>
+                    <span class="fw-bold">{{ booking.participants }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Total Amount</span>
+                    <span class="fw-bold text-success">₹{{ "%.2f"|format(booking.total_amount|float) }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Booked On</span>
+                    <span>{{ booking.booking_date.strftime('%d %b %Y, %I:%M %p') }}</span>
+                </div>
+                
+                {% if booking.booking_status.value == 'Cancelled' %}
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Cancelled On</span>
+                    <span class="text-danger">{{ booking.cancelled_date.strftime('%d %b %Y, %I:%M %p') if booking.cancelled_date else 'N/A' }}</span>
+                </div>
+                {% endif %}
+
+                {% if booking.attendance %}
+                <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                    <span class="text-muted">Attendance</span>
+                    <span>
+                        {% if booking.attendance.status.value == 'Present' %}<span class="text-success fw-bold"><i class="bi bi-check-circle me-1"></i>Present</span>
+                        {% elif booking.attendance.status.value == 'Absent' %}<span class="text-danger fw-bold"><i class="bi bi-x-circle me-1"></i>Absent</span>
+                        {% else %}<span class="text-muted">Not Marked</span>{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="d-grid gap-2 mt-4">
+                    {% if booking.booking_status.value == 'Booked' %}
+                        <form action="{{ url_for('user.cancel_booking_route', booking_id=booking.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to cancel this booking? Slots will be released.');">
+                            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-lg me-1"></i>Cancel Booking</button>
+                        </form>
+                    {% endif %}
+
+                    {% if booking.booking_status.value == 'Completed' and booking.certificate %}
+                        <a href="{{ url_for('user.download_certificate', booking_id=booking.id) }}" target="_blank" class="btn btn-primary w-100">
+                            <i class="bi bi-award me-1"></i>View Certificate
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

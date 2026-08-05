@@ -7,7 +7,7 @@
     <a href="{{ url_for('admin.treks') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
     <h1 class="section-title mb-0"><i class="bi bi-mountain me-2"></i>{{ trek.trek_name }}</h1>
     <div class="ms-auto d-flex gap-2">
-        <a href="{{ url_for('admin.trek_edit', trek_id=trek.id) }}" class="btn btn-warning btn-sm"><i class="bi bi-pencil me-1"></i>Edit</a>
+        <a href="{{ url_for('admin.trek_edit', trek_id=trek.id) }}" class="btn btn-warning btn-sm"><i class="bi bi-pencil me-1"></i>Edit Trek Info</a>
         <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ url_for('admin.trek_delete', trek_id=trek.id) }}', '{{ trek.trek_name }}')"><i class="bi bi-trash me-1"></i>Delete</button>
     </div>
 </div>
@@ -15,7 +15,7 @@
 <div class="row g-4">
     <!-- General Info -->
     <div class="col-lg-8">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm mb-4">
             <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>General Information</h5></div>
             <div class="card-body">
                 <div class="row g-3">
@@ -33,39 +33,18 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted text-uppercase">Difficulty</small>
-                        <p class="mb-0">
-                            {% if trek.difficulty.value == 'Easy' %}
-                                <span class="badge bg-success fs-6">{{ trek.difficulty.value }}</span>
-                            {% elif trek.difficulty.value == 'Moderate' %}
-                                <span class="badge bg-warning text-dark fs-6">{{ trek.difficulty.value }}</span>
-                            {% elif trek.difficulty.value == 'Hard' %}
-                                <span class="badge bg-danger fs-6">{{ trek.difficulty.value }}</span>
-                            {% else %}
-                                <span class="badge bg-dark fs-6">{{ trek.difficulty.value }}</span>
-                            {% endif %}
-                        </p>
+                        <p class="mb-0"><span class="badge bg-dark fs-6">{{ trek.difficulty.value }}</span></p>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted text-uppercase">Status</small>
                         <p class="mb-0">
-                            {% if trek.status.value == 'Upcoming' %}
-                                <span class="badge bg-info fs-6">{{ trek.status.value }}</span>
-                            {% elif trek.status.value == 'Active' %}
-                                <span class="badge bg-success fs-6">{{ trek.status.value }}</span>
-                            {% elif trek.status.value == 'Completed' %}
-                                <span class="badge bg-secondary fs-6">{{ trek.status.value }}</span>
-                            {% else %}
-                                <span class="badge bg-danger fs-6">{{ trek.status.value }}</span>
+                            {% if trek.status.value == 'Pending' %}<span class="badge bg-secondary fs-6">Pending</span>
+                            {% elif trek.status.value == 'Approved' %}<span class="badge bg-primary fs-6">Approved</span>
+                            {% elif trek.status.value == 'Open' %}<span class="badge bg-success fs-6">Open</span>
+                            {% elif trek.status.value == 'Closed' %}<span class="badge bg-warning text-dark fs-6">Closed</span>
+                            {% elif trek.status.value == 'Completed' %}<span class="badge bg-purple fs-6" style="background-color: var(--bs-purple);">Completed</span>
                             {% endif %}
                         </p>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted text-uppercase">Duration</small>
-                        <p class="fw-semibold mb-0">{{ trek.duration_days }} day{{ 's' if trek.duration_days > 1 }}</p>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted text-uppercase">Price</small>
-                        <p class="fw-semibold mb-0 text-success">₹{{ "%.2f"|format(trek.price|float) }}</p>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted text-uppercase">Total Slots</small>
@@ -73,7 +52,7 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted text-uppercase">Available Slots</small>
-                        <p class="fw-semibold mb-0">{{ trek.available_slots }}</p>
+                        <p class="fw-semibold mb-0 text-success">{{ trek.available_slots }}</p>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted text-uppercase">Start Date</small>
@@ -83,9 +62,66 @@
                         <small class="text-muted text-uppercase">End Date</small>
                         <p class="fw-semibold mb-0">{{ trek.end_date.strftime('%d %b %Y') }}</p>
                     </div>
+                    <div class="col-md-3">
+                        <small class="text-muted text-uppercase">Booking Deadline</small>
+                        <p class="fw-semibold mb-0 text-danger">{{ trek.booking_deadline.strftime('%d %b %Y') if trek.booking_deadline else 'N/A' }}</p>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Lifecycle Management (State Machine) -->
+        <div class="card shadow-sm border-warning mb-4">
+            <div class="card-header bg-warning bg-opacity-10"><h5 class="mb-0 text-dark"><i class="bi bi-arrow-repeat me-2"></i>Lifecycle Management</h5></div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-1 mb-md-0 mb-3" style="font-size: 0.8rem;">
+                            <span class="badge bg-secondary">Pending</span> <i class="bi bi-arrow-right"></i>
+                            <span class="badge bg-primary">Approved</span> <i class="bi bi-arrow-right"></i>
+                            <span class="badge bg-success">Open</span> <i class="bi bi-arrow-right"></i>
+                            <span class="badge bg-warning text-dark">Closed</span> <i class="bi bi-arrow-right"></i>
+                            <span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        {% if allowed_transitions %}
+                        <form method="POST" action="{{ url_for('admin.trek_update_status', trek_id=trek.id) }}" class="d-flex gap-2">
+                            <select class="form-select" name="status" required>
+                                {% for s in allowed_transitions %}<option value="{{ s.value }}">{{ s.value }}</option>{% endfor %}
+                            </select>
+                            <button class="btn btn-warning fw-bold">Advance Status</button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted fst-italic">This trek is Completed. No further transitions possible.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Trail -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-list-check me-2"></i>Audit Trail</h5></div>
+            <div class="card-body p-0">
+                {% if audit_trail %}
+                <ul class="list-group list-group-flush">
+                    {% for log in audit_trail %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ log.performer.name if log.performer else 'System' }}</strong>
+                            <small class="text-muted d-block">{{ log.details }}</small>
+                        </div>
+                        <span class="badge bg-light text-dark">{{ log.performed_at.strftime('%d %b %H:%M') }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-3 text-muted">No audit logs.</div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 
     <!-- Sidebar Stats -->
@@ -94,20 +130,12 @@
             <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Quick Stats</h6></div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Bookings</span>
+                    <span class="text-muted">Total Bookings</span>
                     <strong>{{ trek.bookings|length }}</strong>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Assigned Staff</span>
                     <strong>{{ trek.staff_assignments|length }}</strong>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Slots Filled</span>
-                    <strong>{{ trek.total_slots - trek.available_slots }}/{{ trek.total_slots }}</strong>
-                </div>
-                <div class="progress mt-2" style="height: 8px;">
-                    {% set pct = ((trek.total_slots - trek.available_slots) / trek.total_slots * 100) if trek.total_slots > 0 else 0 %}
-                    <div class="progress-bar bg-primary" style="width: {{ pct }}%"></div>
                 </div>
             </div>
         </div>
@@ -122,7 +150,6 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
                             <a href="{{ url_for('admin.staff_view', user_id=a.staff.user.id) }}" class="text-decoration-none fw-semibold">{{ a.staff.user.name }}</a>
-                            <br><small class="text-muted">{{ a.staff.specialization or 'General' }}</small>
                         </div>
                         <form method="POST" action="{{ url_for('admin.assignment_remove', assignment_id=a.id) }}">
                             <button class="btn btn-outline-danger btn-sm" title="Remove"><i class="bi bi-x-lg"></i></button>
@@ -131,9 +158,7 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <div class="text-center py-3 text-muted">
-                    <i class="bi bi-person-x"></i> No staff assigned
-                </div>
+                <div class="text-center py-3 text-muted">No staff assigned</div>
                 {% endif %}
             </div>
         </div>
@@ -148,7 +173,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
-                    <tr><th>ID</th><th>User</th><th>Date</th><th>Participants</th><th>Status</th><th>Payment</th><th>Amount</th></tr>
+                    <tr><th>ID</th><th>User</th><th>Date</th><th>Participants</th><th>Booking Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                     {% for b in trek.bookings %}
@@ -158,17 +183,12 @@
                         <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                         <td>{{ b.participants }}</td>
                         <td>
-                            {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">{{ b.booking_status.value }}</span>
-                            {% else %}<span class="badge bg-secondary">{{ b.booking_status.value }}</span>{% endif %}
+                            {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary">Booked</span>
+                            {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
+                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
                         </td>
-                        <td>
-                            {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success">{{ b.payment_status.value }}</span>
-                            {% elif b.payment_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.payment_status.value }}</span>
-                            {% else %}<span class="badge bg-secondary">{{ b.payment_status.value }}</span>{% endif %}
-                        </td>
-                        <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
+                        <td><a href="{{ url_for('admin.booking_view', booking_id=b.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -197,7 +217,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
 function confirmDelete(url, name) {

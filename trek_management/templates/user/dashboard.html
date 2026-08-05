@@ -31,7 +31,7 @@
                 <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-journal-bookmark"></i></div>
                 <div>
                     <div class="stat-value text-primary">{{ stats.booked_treks }}</div>
-                    <div class="stat-label">Booked Treks</div>
+                    <div class="stat-label">Active Bookings</div>
                 </div>
             </div>
         </div>
@@ -50,65 +50,96 @@
     <div class="col-xl-3 col-md-6">
         <div class="card stat-card card-orange shadow-sm h-100">
             <div class="card-body d-flex align-items-center gap-3">
-                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-hourglass-split"></i></div>
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-x-circle"></i></div>
                 <div>
-                    <div class="stat-value text-warning">{{ stats.pending_bookings }}</div>
-                    <div class="stat-label">Pending Bookings</div>
+                    <div class="stat-value text-warning">{{ stats.cancelled_treks }}</div>
+                    <div class="stat-label">Cancelled Bookings</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Bookings -->
-<div class="card content-card shadow-sm mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-journal-bookmark me-2"></i>Recent Bookings</h5>
-        <a href="{{ url_for('user.my_bookings') }}" class="btn btn-sm btn-outline-success">View All</a>
-    </div>
-    <div class="card-body p-0">
-        {% if recent_bookings %}
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Trek</th>
-                        <th>Date</th>
-                        <th>Participants</th>
-                        <th>Booking Status</th>
-                        <th>Trek Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for b in recent_bookings %}
-                    <tr>
-                        <td><a href="{{ url_for('user.trek_detail', trek_id=b.trek_id) }}" class="text-decoration-none fw-semibold">{{ b.trek.trek_name }}</a></td>
-                        <td class="text-muted">{{ b.booking_date.strftime('%d %b %Y') }}</td>
-                        <td>{{ b.participants }}</td>
-                        <td>
-                            {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success badge-status">Confirmed</span>
-                            {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark badge-status">Pending</span>
-                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger badge-status">Cancelled</span>
-                            {% else %}<span class="badge bg-secondary badge-status">{{ b.booking_status.value }}</span>{% endif %}
-                        </td>
-                        <td>
-                            {% if b.trek.status.value == 'Upcoming' %}<span class="badge bg-primary badge-status">{{ b.trek.status.value }}</span>
-                            {% elif b.trek.status.value == 'Active' %}<span class="badge bg-success badge-status">{{ b.trek.status.value }}</span>
-                            {% elif b.trek.status.value == 'Completed' %}<span class="badge bg-secondary badge-status">{{ b.trek.status.value }}</span>
-                            {% else %}<span class="badge bg-danger badge-status">{{ b.trek.status.value }}</span>{% endif %}
-                        </td>
-                    </tr>
+<div class="row">
+    <!-- Upcoming Treks -->
+    <div class="col-lg-6 mb-4">
+        <div class="card content-card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Upcoming Treks</h5>
+                <a href="{{ url_for('user.my_bookings', status='booked') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_bookings %}
+                <div class="list-group list-group-flush">
+                    {% for b in upcoming_bookings %}
+                    <a href="{{ url_for('user.booking_detail', booking_id=b.id) }}" class="list-group-item list-group-item-action p-3">
+                        <div class="d-flex w-100 justify-content-between mb-1">
+                            <h6 class="mb-0 fw-bold">{{ b.trek.trek_name }}</h6>
+                            <small class="text-primary">{{ b.trek.start_date.strftime('%d %b %Y') }}</small>
+                        </div>
+                        <p class="mb-1 text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ b.trek.location }}</p>
+                        <small>
+                            <span class="badge bg-primary">Booked</span>
+                        </small>
+                    </a>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar d-block mb-2"></i>
+                    <p class="mb-1">No upcoming treks.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <i class="bi bi-journal d-block mb-2"></i>
-            <p class="mb-1">No bookings yet.</p>
-            <a href="{{ url_for('user.available_treks') }}" class="btn btn-sm btn-success mt-2">Explore Treks</a>
+    </div>
+
+    <!-- Recent Bookings -->
+    <div class="col-lg-6 mb-4">
+        <div class="card content-card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-journal-bookmark me-2"></i>Recent Bookings</h5>
+                <a href="{{ url_for('user.my_bookings') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_bookings %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Trek</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in recent_bookings %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('user.booking_detail', booking_id=b.id) }}" class="text-decoration-none fw-semibold">
+                                        {{ b.trek.trek_name }}
+                                    </a>
+                                </td>
+                                <td class="text-muted">{{ b.booking_date.strftime('%d %b') }}</td>
+                                <td>
+                                    {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary badge-status">Booked</span>
+                                    {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple badge-status" style="background-color: var(--bs-purple);">Completed</span>
+                                    {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger badge-status">Cancelled</span>
+                                    {% else %}<span class="badge bg-secondary badge-status">{{ b.booking_status.value }}</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-journal d-block mb-2"></i>
+                    <p class="mb-1">No bookings yet.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

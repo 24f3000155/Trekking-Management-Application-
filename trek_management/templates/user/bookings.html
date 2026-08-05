@@ -5,25 +5,38 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="section-title"><i class="bi bi-journal-bookmark me-2"></i>My Bookings</h1>
-        <p class="section-subtitle mb-0">Track all your current and recent trek bookings</p>
+        <p class="section-subtitle mb-0">Track all your current and past trek bookings</p>
     </div>
 </div>
 
-<div class="card content-card shadow-sm">
+<div class="card content-card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link {% if status_filter == 'all' %}active{% endif %}" href="{{ url_for('user.my_bookings', status='all') }}">All Bookings</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if status_filter == 'booked' %}active{% endif %}" href="{{ url_for('user.my_bookings', status='booked') }}">Active (Booked)</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if status_filter == 'completed' %}active{% endif %}" href="{{ url_for('user.my_bookings', status='completed') }}">Completed</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if status_filter == 'cancelled' %}active{% endif %}" href="{{ url_for('user.my_bookings', status='cancelled') }}">Cancelled</a>
+            </li>
+        </ul>
+    </div>
     <div class="card-body p-0">
         {% if bookings %}
         <div class="table-responsive">
-            <table class="table table-hover mb-0" id="bookings-table">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Booking ID</th>
                         <th>Trek Name</th>
-                        <th>Location</th>
+                        <th>Start Date</th>
                         <th>Booking Date</th>
-                        <th>Booking Status</th>
-                        <th>Payment Status</th>
-                        <th>Participants</th>
-                        <th>Trek Status</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -31,38 +44,28 @@
                     {% for b in bookings %}
                     <tr>
                         <td><span class="text-muted">#{{ b.id }}</span></td>
-                        <td><a href="{{ url_for('user.trek_detail', trek_id=b.trek_id) }}" class="text-decoration-none fw-semibold">{{ b.trek.trek_name }}</a></td>
-                        <td class="text-muted">{{ b.trek.location }}</td>
-                        <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                         <td>
-                            {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success badge-status">Confirmed</span>
-                            {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark badge-status">Pending</span>
+                            <a href="{{ url_for('user.booking_detail', booking_id=b.id) }}" class="text-decoration-none fw-semibold">
+                                {{ b.trek.trek_name }}
+                            </a>
+                        </td>
+                        <td class="text-muted">{{ b.trek.start_date.strftime('%d %b %Y') }}</td>
+                        <td class="text-muted">{{ b.booking_date.strftime('%d %b %Y') }}</td>
+                        <td>
+                            {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary badge-status">Booked</span>
+                            {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple badge-status" style="background-color: var(--bs-purple);">Completed</span>
                             {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger badge-status">Cancelled</span>
                             {% else %}<span class="badge bg-secondary badge-status">{{ b.booking_status.value }}</span>{% endif %}
                         </td>
                         <td>
-                            {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success badge-status">Paid</span>
-                            {% elif b.payment_status.value == 'Pending' %}<span class="badge bg-warning text-dark badge-status">Pending</span>
-                            {% elif b.payment_status.value == 'Refunded' %}<span class="badge bg-info badge-status">Refunded</span>
-                            {% else %}<span class="badge bg-danger badge-status">{{ b.payment_status.value }}</span>{% endif %}
-                        </td>
-                        <td class="fw-semibold">{{ b.participants }}</td>
-                        <td>
-                            {% if b.trek.status.value == 'Upcoming' %}<span class="badge bg-primary badge-status">{{ b.trek.status.value }}</span>
-                            {% elif b.trek.status.value == 'Active' %}<span class="badge bg-success badge-status">{{ b.trek.status.value }}</span>
-                            {% elif b.trek.status.value == 'Completed' %}<span class="badge bg-secondary badge-status">{{ b.trek.status.value }}</span>
-                            {% else %}<span class="badge bg-danger badge-status">{{ b.trek.status.value }}</span>{% endif %}
-                        </td>
-                        <td>
                             <div class="d-flex gap-1">
-                                <a href="{{ url_for('user.trek_detail', trek_id=b.trek_id) }}" class="btn btn-sm btn-outline-success btn-action" title="View Trek"><i class="bi bi-eye"></i></a>
-                                {% if b.booking_status.value in ('Pending', 'Confirmed') %}
-                                <form method="POST" action="{{ url_for('user.cancel_booking_route', booking_id=b.id) }}" style="display:inline;">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger btn-action" title="Cancel Booking"
-                                            onclick="return confirm('Are you sure you want to cancel this booking?')">
-                                        <i class="bi bi-x-lg"></i>
-                                    </button>
-                                </form>
+                                <a href="{{ url_for('user.booking_detail', booking_id=b.id) }}" class="btn btn-sm btn-outline-success btn-action" title="View Details">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                {% if b.booking_status.value == 'Completed' and b.certificate %}
+                                <a href="{{ url_for('user.download_certificate', booking_id=b.id) }}" class="btn btn-sm btn-outline-primary btn-action" title="Certificate">
+                                    <i class="bi bi-award"></i>
+                                </a>
                                 {% endif %}
                             </div>
                         </td>
@@ -74,7 +77,7 @@
         {% else %}
         <div class="empty-state">
             <i class="bi bi-journal d-block mb-2"></i>
-            <p class="mb-1">You don't have any bookings yet.</p>
+            <p class="mb-1">No bookings match this filter.</p>
             <a href="{{ url_for('user.available_treks') }}" class="btn btn-sm btn-success mt-2">Explore Treks</a>
         </div>
         {% endif %}

@@ -34,8 +34,7 @@
                         <th>Trek</th>
                         <th>Booking Date</th>
                         <th>Participants</th>
-                        <th>Booking Status</th>
-                        <th>Payment Status</th>
+                        <th>Status</th>
                         <th>Amount</th>
                         <th>Actions</th>
                     </tr>
@@ -57,22 +56,16 @@
                         <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                         <td>{{ b.participants }}</td>
                         <td>
-                            {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>
-                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">{{ b.booking_status.value }}</span>
-                            {% else %}<span class="badge bg-secondary">{{ b.booking_status.value }}</span>{% endif %}
-                        </td>
-                        <td>
-                            {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success">{{ b.payment_status.value }}</span>
-                            {% elif b.payment_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.payment_status.value }}</span>
-                            {% elif b.payment_status.value == 'Refunded' %}<span class="badge bg-info">{{ b.payment_status.value }}</span>
-                            {% else %}<span class="badge bg-danger">{{ b.payment_status.value }}</span>{% endif %}
+                            {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary">Booked</span>
+                            {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span>
+                            {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
                         </td>
                         <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('admin.booking_view', booking_id=b.id) }}" class="btn btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
-                                {% if b.booking_status.value != 'Cancelled' %}
+                                {% if b.booking_status.value == 'Booked' %}
                                 <button type="button" class="btn btn-outline-danger" title="Cancel" onclick="confirmCancel('{{ url_for('admin.booking_cancel', booking_id=b.id) }}', '#{{ b.id }}')"><i class="bi bi-x-circle"></i></button>
                                 {% endif %}
                             </div>
