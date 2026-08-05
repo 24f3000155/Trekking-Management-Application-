@@ -3,11 +3,13 @@ Authentication routes: login, logout, trekker registration, staff registration.
 """
 
 import re
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_user, logout_user, login_required
 
 from app.database import SessionLocal
 from app.models import User, UserRole, StaffProfile, ApprovalStatus
 from app.security import hash_password, verify_password
+from app.validators import validate_password_strength
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -18,6 +20,7 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        remember = request.form.get("remember", "") == "on"
 
         if not email or not password:
             flash("Please enter both email and password.", "danger")
@@ -49,16 +52,14 @@ def login():
                     return render_template("login.html")
 
                 if user.staff_profile.approval_status == ApprovalStatus.PENDING:
-                    flash("Your Trek Staff account is awaiting Admin approval.", "info")
-                    return render_template("login.html")
+                    return redirect(url_for("auth.pending_staff"))
 
                 if user.staff_profile.approval_status == ApprovalStatus.REJECTED:
                     flash("Your Trek Staff registration has been rejected.", "danger")
                     return render_template("login.html")
 
-            # Authentication successful — store ONLY user_id in session
-            session.clear()
-            session["user_id"] = user.id
+            # Authentication successful — handle via Flask-Login
+            login_user(user, remember=remember)
 
             # Redirect based on role
             if user.role == UserRole.ADMIN:
@@ -75,9 +76,10 @@ def login():
 
 
 @auth_bp.route("/logout")
+@login_required
 def logout():
     """Destroy session and redirect to login."""
-    session.clear()
+    logout_user()
     flash("You have been logged out.", "info")
     return redirect(url_for("auth.login"))
 
@@ -102,8 +104,11 @@ def register():
             errors.append("Please enter a valid email address.")
         if not password:
             errors.append("Password is required.")
-        elif len(password) < 6:
-            errors.append("Password must be at least 6 characters.")
+        else:
+            pwd_error = validate_password_strength(password)
+            if pwd_error:
+                errors.append(pwd_error)
+
         if password != confirm_password:
             errors.append("Passwords do not match.")
 
@@ -173,8 +178,11 @@ def staff_register():
             errors.append("Please enter a valid email address.")
         if not password:
             errors.append("Password is required.")
-        elif len(password) < 6:
-            errors.append("Password must be at least 6 characters.")
+        else:
+            pwd_error = validate_password_strength(password)
+            if pwd_error:
+                errors.append(pwd_error)
+                
         if password != confirm_password:
             errors.append("Passwords do not match.")
 
@@ -211,7 +219,7 @@ def staff_register():
                                        emergency_contact=emergency_contact,
                                        bio=bio)
 
-            # Create user with TREK_STAFF role — hardcoded, never from frontend
+            # Create user with TREK_STAFF role
             user = User(
                 name=name,
                 email=email,
@@ -236,8 +244,7 @@ def staff_register():
             db.add(staff_profile)
             db.commit()
 
-            flash("Staff registration successful. Your account is pending Admin approval.", "success")
-            return redirect(url_for("auth.login"))
+            return redirect(url_for("auth.pending_staff"))
 
         except Exception as e:
             db.rollback()
@@ -255,3 +262,9 @@ def staff_register():
             db.close()
 
     return render_template("staff_register.html")
+
+
+@auth_bp.route("/staff/pending")
+def pending_staff():
+    """Show pending approval page."""
+    return render_template("pending_staff.html")

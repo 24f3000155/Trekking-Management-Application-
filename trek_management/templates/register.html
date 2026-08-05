@@ -1,35 +1,75 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block head %}
+<style>
+    body { background: transparent; padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm mt-4">
-            <div class="card-body p-5">
-                <h2 class="text-center mb-4">Trekker Registration</h2>
-                <form method="POST" class="needs-validation" action="{{ url_for('auth.register') }}" novalidate>
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="name" name="name" value="{{ name|default('') }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" value="{{ email|default('') }}" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control phone-input" id="phone" name="phone" value="{{ phone|default('') }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control password-strength" id="password" name="password" required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="confirm_password" class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">Register</button>
-                </form>
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header" style="background: linear-gradient(135deg, #0b3d2e 0%, #145239 100%);">
+            <div class="auth-icon">
+                <i class="bi bi-person-plus text-success"></i>
             </div>
+            <h2>Create an Account</h2>
+            <p>Start your trekking adventure with us</p>
+        </div>
+        <div class="auth-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth.register') }}" data-loading="true" id="registerForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required autofocus>
+                    <label for="name">Full Name</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                    <label for="email">Email address</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="phone" name="phone" placeholder="+123456789">
+                    <label for="phone">Phone Number (Optional)</label>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-floating">
+                        <input type="password" class="form-control password-strength" id="password" name="password" placeholder="Password" required>
+                        <label for="password">Password</label>
+                        <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-decoration-none text-muted password-toggle" data-target="password" style="padding: 0 1rem; z-index:5;">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm Password" required>
+                    <label for="confirm_password">Confirm Password</label>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                    <span class="btn-text">Register</span>
+                    <span class="btn-spinner spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+        <div class="auth-footer text-muted border-top pt-3">
+            <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-semibold">Login here</a></p>
         </div>
     </div>
 </div>

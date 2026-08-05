@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Server Error{% endblock %}
+{% block head %}
+<style>
+    body { background: var(--tm-body-bg); padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div>
+        <div class="error-code text-danger">500</div>
+        <h1 class="error-title">Internal Server Error</h1>
+        <p class="error-message">Oops! Something went wrong on our end. Please try again later.</p>
+        <button onclick="window.location.reload()" class="btn btn-primary px-4">
+            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Page
+        </button>
+    </div>
+</div>
+{% endblock %}

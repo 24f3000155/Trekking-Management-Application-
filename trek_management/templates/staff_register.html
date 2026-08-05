@@ -1,73 +1,101 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Staff Registration{% endblock %}
+{% block head %}
+<style>
+    body { background: transparent; padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm mt-4">
-            <div class="card-body p-5">
-                <h2 class="text-center mb-4">Trek Staff Registration</h2>
-                <p class="text-muted text-center mb-4">Staff accounts require Admin approval before accessing the dashboard.</p>
-                
-                <form method="POST" class="needs-validation" action="{{ url_for('auth.staff_register') }}" novalidate>
-                    <h5 class="mb-3 border-bottom pb-2">Basic Info</h5>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="name" class="form-label">Full Name</label>
-                            <input type="text" class="form-control" id="name" name="name" value="{{ name|default('') }}" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" value="{{ email|default('') }}" required>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control password-strength" id="password" name="password" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="confirm_password" class="form-label">Confirm Password</label>
-                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control phone-input" id="phone" name="phone" value="{{ phone|default('') }}">
-                    </div>
-
-                    <h5 class="mb-3 border-bottom pb-2">Professional Info</h5>
-                    
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label for="experience_years" class="form-label">Experience (Years)</label>
-                            <input type="number" class="form-control" id="experience_years" name="experience_years" value="{{ experience_years|default('0') }}" min="0">
-                        </div>
-                        <div class="col-md-8 mb-3">
-                            <label for="specialization" class="form-label">Specialization</label>
-                            <input type="text" class="form-control" id="specialization" name="specialization" value="{{ specialization|default('') }}">
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="certification" class="form-label">Certifications</label>
-                        <input type="text" class="form-control" id="certification" name="certification" value="{{ certification|default('') }}">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="emergency_contact" class="form-label">Emergency Contact Info</label>
-                        <input type="text" class="form-control" id="emergency_contact" name="emergency_contact" value="{{ emergency_contact|default('') }}">
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="bio" class="form-label">Bio</label>
-                        <textarea class="form-control" id="bio" name="bio" rows="3">{{ bio|default('') }}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-warning w-100">Submit Staff Registration</button>
-                </form>
+<div class="auth-wrapper">
+    <div class="auth-card auth-card-wide">
+        <div class="auth-header" style="background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);">
+            <div class="auth-icon">
+                <i class="bi bi-shield-plus text-white"></i>
             </div>
+            <h2>Join Our Trek Staff</h2>
+            <p>Apply to become a guide, coordinator, or support staff</p>
+        </div>
+        <div class="auth-body">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth.staff_register') }}" data-loading="true">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <h5 class="mb-3 border-bottom pb-2">Account Information</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required autofocus>
+                            <label for="name">Full Name *</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+                            <label for="email">Email Address *</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="phone" name="phone" placeholder="Phone">
+                            <label for="phone">Phone Number</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="password" class="form-control password-strength" id="password" name="password" placeholder="Password" required>
+                            <label for="password">Password *</label>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="mb-3 border-bottom pb-2">Professional Profile</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            <input type="number" class="form-control" id="experience_years" name="experience_years" placeholder="0" min="0" value="0">
+                            <label for="experience_years">Experience (Years)</label>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="specialization" name="specialization" placeholder="e.g. High Altitude Guide, Medic">
+                            <label for="specialization">Specialization</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="certification" name="certification" placeholder="Certifications">
+                            <label for="certification">Certifications</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-floating">
+                            <textarea class="form-control" id="bio" name="bio" placeholder="Bio" style="height: 100px"></textarea>
+                            <label for="bio">Short Bio / Background</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                    <span class="btn-text">Submit Application</span>
+                    <span class="btn-spinner spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+        <div class="auth-footer text-muted border-top pt-3">
+            <p class="mb-0">Already have an account? <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-semibold">Login here</a></p>
         </div>
     </div>
 </div>

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Unauthorized{% endblock %}
+{% block head %}
+<style>
+    body { background: var(--tm-body-bg); padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="error-page">
+    <div>
+        <div class="error-code">401</div>
+        <h1 class="error-title">Unauthorized</h1>
+        <p class="error-message">You are not authenticated. Please log in to access this page.</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary px-4">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Go to Login
+        </a>
+    </div>
+</div>
+{% endblock %}

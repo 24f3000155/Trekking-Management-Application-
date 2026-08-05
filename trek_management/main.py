@@ -5,12 +5,14 @@ Initializes the Flask application, database, and route blueprints.
 """
 
 import os
-from flask import Flask, redirect, url_for, request
+from datetime import timedelta
+from flask import Flask, redirect, url_for, request, render_template
 
 from app.api_utils import api_error
+from app.database import engine, Base, SessionLocal
+from app.models import User
+from app.extensions import login_manager, csrf
 
-from app.database import engine, Base
-from app.models import User, StaffProfile, Trek, Booking, TrekStaffAssignment
 from app.routes.auth_routes import auth_bp
 from app.routes.admin_routes import admin_bp
 from app.routes.staff_routes import staff_bp
@@ -20,6 +22,17 @@ from app.routes.chart_routes import chart_bp
 from scripts.create_admin import create_admin
 
 
+from sqlalchemy.orm import joinedload
+
+@login_manager.user_loader
+def load_user(user_id):
+    db = SessionLocal()
+    try:
+        return db.query(User).options(joinedload(User.staff_profile)).filter(User.id == int(user_id)).first()
+    finally:
+        db.close()
+
+
 def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -27,7 +40,23 @@ def create_app():
     # Secure random key for sessions
     app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
 
+    # Session Security Config
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = False  # Set True in prod (HTTPS)
+    app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=2)
+    app.config["WTF_CSRF_ENABLED"] = True
+
+    # Initialize extensions
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.login_message_category = "warning"
+    csrf.init_app(app)
+
     # Register blueprints
+    # Exempt API from CSRF if you plan to use tokens, otherwise leave it protected.
+    csrf.exempt(api_bp)
+    
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(staff_bp)
@@ -39,7 +68,7 @@ def create_app():
     def index():
         return redirect(url_for('auth.login'))
 
-    # JSON Error Handlers for API routes
+    # Error Handlers
     @app.errorhandler(400)
     def bad_request(e):
         if request.path.startswith('/api/'):
@@ -50,19 +79,19 @@ def create_app():
     def unauthorized(e):
         if request.path.startswith('/api/'):
             return api_error("Unauthorized", status_code=401)
-        return "Unauthorized", 401
+        return render_template("errors/401.html"), 401
 
     @app.errorhandler(403)
     def forbidden(e):
         if request.path.startswith('/api/'):
             return api_error("Forbidden", status_code=403)
-        return "Forbidden", 403
+        return render_template("errors/403.html"), 403
 
     @app.errorhandler(404)
     def not_found(e):
         if request.path.startswith('/api/'):
             return api_error("Not Found", status_code=404)
-        return "Not Found", 404
+        return render_template("errors/404.html"), 404
 
     @app.errorhandler(405)
     def method_not_allowed(e):
@@ -74,7 +103,7 @@ def create_app():
     def internal_server_error(e):
         if request.path.startswith('/api/'):
             return api_error("Internal Server Error", status_code=500)
-        return "Internal Server Error", 500
+        return render_template("errors/500.html"), 500
 
     return app
 

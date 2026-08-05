@@ -1,60 +1,32 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Pending Approval{% endblock %}
+{% block head %}
+<style>
+    body { background: transparent; padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-sm mt-4">
-            <div class="card-body p-5">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2>Pending Staff Registrations</h2>
-                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
-                </div>
-                
-                {% if not staff_list %}
-                    <div class="alert alert-info">There are currently no staff registrations awaiting approval.</div>
-                {% else %}
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Experience</th>
-                                    <th>Specialization</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for staff in staff_list %}
-                                <tr>
-                                    <td>{{ staff.name }}</td>
-                                    <td>{{ staff.email }}</td>
-                                    <td>{{ staff.phone or 'N/A' }}</td>
-                                    <td>{{ staff.experience_years }} years</td>
-                                    <td>{{ staff.specialization or 'N/A' }}</td>
-                                    <td>
-                                        <form method="POST" action="{{ url_for('admin.approve_staff', profile_id=staff.profile_id) }}" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                        </form>
-                                        <form method="POST" action="{{ url_for('admin.reject_staff', profile_id=staff.profile_id) }}" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-danger">Reject</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td colspan="6" class="bg-light text-muted small">
-                                        <strong>Bio:</strong> {{ staff.bio or 'N/A' }} | 
-                                        <strong>Cert:</strong> {{ staff.certification or 'N/A' }} | 
-                                        <strong>Emergency:</strong> {{ staff.emergency_contact or 'N/A' }}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
+<div class="auth-wrapper">
+    <div class="auth-card text-center text-dark">
+        <div class="auth-header bg-warning">
+            <div class="auth-icon bg-white text-warning">
+                <i class="bi bi-hourglass-split"></i>
             </div>
+            <h2 class="text-white">Account Pending</h2>
+        </div>
+        <div class="auth-body py-5">
+            <h4 class="mb-3">Application Under Review</h4>
+            <p class="text-muted mb-4">
+                Thank you for applying to be part of our Trek Staff. Your application has been received and is currently being reviewed by an Administrator.
+            </p>
+            <p class="text-muted mb-4">
+                You will be notified once your account is approved. Until then, you will not be able to log in to the staff dashboard.
+            </p>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary px-4">
+                <i class="bi bi-arrow-left me-2"></i>Return to Login
+            </a>
         </div>
     </div>
 </div>

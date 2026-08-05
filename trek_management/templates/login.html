@@ -1,23 +1,69 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block head %}
+<style>
+    body { background: transparent; padding-top: 0 !important; }
+    .tm-navbar, .tm-footer { display: none !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm mt-5">
-            <div class="card-body p-5">
-                <h2 class="text-center mb-4">Login</h2>
-                <form method="POST" action="{{ url_for('auth.login') }}">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
-                </form>
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-icon">
+                <i class="bi bi-box-arrow-in-right"></i>
             </div>
+            <h2>Welcome Back</h2>
+            <p>Login to your Trek Management account</p>
+        </div>
+        <div class="auth-body">
+            <!-- Flash logic moved to base.html, but we keep it here just in case since wrapper hides the global one -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('auth.login') }}" data-loading="true">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-floating mb-3">
+                    <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="name@example.com" required autofocus>
+                    <label for="email">Email address</label>
+                </div>
+
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Password" required>
+                    <label for="password">Password</label>
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-decoration-none text-muted password-toggle" data-target="password" style="padding: 0 1rem;">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="remember" id="remember">
+                        <label class="form-check-label text-muted" for="remember">
+                            Remember me
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                    <span class="btn-text">Log In</span>
+                    <span class="btn-spinner spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                </button>
+            </form>
+        </div>
+        <div class="auth-footer text-muted border-top pt-3">
+            <p class="mb-1">Don't have a Trekker account? <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-semibold">Register here</a></p>
+            <p class="mb-0">Want to join our staff? <a href="{{ url_for('auth.staff_register') }}" class="text-decoration-none fw-semibold">Apply now</a></p>
         </div>
     </div>
 </div>

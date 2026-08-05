@@ -36,6 +36,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship, validates
 
+from flask_login import UserMixin
 from app.database import Base
 
 
@@ -109,7 +110,7 @@ def _utcnow():
 # Models
 # ──────────────────────────────────────────────
 
-class User(Base):
+class User(Base, UserMixin):
     """
     Represents an application user (Admin, Trek Staff, or Trekker).
     """
