@@ -11,6 +11,7 @@
 <div class="card shadow-sm">
     <div class="card-body">
         <form method="POST" class="needs-validation" action="{{ url_for('admin.trek_edit', trek_id=trek.id) if trek else url_for('admin.trek_create') }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="row g-3">
                 <div class="col-md-8">
                     <label for="trek_name" class="form-label fw-semibold">Trek Name <span class="text-danger">*</span></label>
@@ -63,6 +64,11 @@
                 <div class="col-md-3">
                     <label for="end_date" class="form-label fw-semibold">End Date <span class="text-danger">*</span></label>
                     <input type="date" class="form-control" id="end_date" name="end_date" value="{{ trek.end_date.strftime('%Y-%m-%d') if trek else '' }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label for="booking_deadline" class="form-label fw-semibold">Booking Deadline</label>
+                    <input type="date" class="form-control" id="booking_deadline" name="booking_deadline" value="{{ trek.booking_deadline.strftime('%Y-%m-%d') if trek and trek.booking_deadline else '' }}">
+                    <div class="form-text">Optional. Last date users can book.</div>
                 </div>
             </div>
             <hr class="my-4">

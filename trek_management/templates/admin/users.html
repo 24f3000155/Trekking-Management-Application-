@@ -64,14 +64,14 @@
                                     <li><a class="dropdown-item" href="{{ url_for('admin.user_view', user_id=u.id) }}"><i class="bi bi-eye me-2"></i>View Profile</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     {% if u.is_active %}
-                                    <li><form method="POST" action="{{ url_for('admin.user_deactivate', user_id=u.id) }}"><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.user_deactivate', user_id=u.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
                                     {% else %}
-                                    <li><form method="POST" action="{{ url_for('admin.user_activate', user_id=u.id) }}"><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.user_activate', user_id=u.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
                                     {% endif %}
                                     {% if u.is_blacklisted %}
-                                    <li><form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=u.id) }}"><button class="dropdown-item text-success"><i class="bi bi-unlock me-2"></i>Unblacklist</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=u.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-success"><i class="bi bi-unlock me-2"></i>Unblacklist</button></form></li>
                                     {% else %}
-                                    <li><form method="POST" action="{{ url_for('admin.user_blacklist', user_id=u.id) }}"><button class="dropdown-item text-danger"><i class="bi bi-slash-circle me-2"></i>Blacklist</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.user_blacklist', user_id=u.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-danger"><i class="bi bi-slash-circle me-2"></i>Blacklist</button></form></li>
                                     {% endif %}
                                 </ul>
                             </div>

@@ -887,3 +887,13 @@ body {
         padding: 2rem 3rem 3rem;
     }
 }
+
+/* ── Dropdown overflow fix ──
+   Prevent dropdown menus from being clipped inside scrollable table containers */
+.table-responsive {
+    overflow: visible !important;
+}
+
+.dropdown-menu {
+    z-index: 1050;
+}

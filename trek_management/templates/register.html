@@ -18,38 +18,29 @@
             <p>Start your trekking adventure with us</p>
         </div>
         <div class="auth-body">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+
 
             <form method="POST" action="{{ url_for('auth.register') }}" data-loading="true" id="registerForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required autofocus>
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Full Name" required autofocus minlength="2" maxlength="50">
                     <label for="name">Full Name</label>
                 </div>
 
                 <div class="form-floating mb-3">
-                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required maxlength="120">
                     <label for="email">Email address</label>
                 </div>
 
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="phone" name="phone" placeholder="+123456789">
+                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="+123456789" pattern="^\+?[0-9\-\s]{10,15}$" title="Phone number should be 10-15 digits. Can start with +">
                     <label for="phone">Phone Number (Optional)</label>
                 </div>
 
                 <div class="mb-3">
                     <div class="form-floating">
-                        <input type="password" class="form-control password-strength" id="password" name="password" placeholder="Password" required>
+                        <input type="password" class="form-control password-strength" id="password" name="password" placeholder="Password" required minlength="8">
                         <label for="password">Password</label>
                         <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-decoration-none text-muted password-toggle" data-target="password" style="padding: 0 1rem; z-index:5;">
                             <i class="bi bi-eye"></i>
