@@ -40,3 +40,17 @@
     border-color: #4361ee;
     box-shadow: 0 0 0 3px rgba(67,97,238,.15);
 }
+
+/* ── Dropdown overflow fix ──
+   Prevent dropdown menus from being clipped inside scrollable containers */
+.table-responsive {
+    overflow: visible !important;
+}
+
+.card-body .table-responsive {
+    overflow: visible !important;
+}
+
+.dropdown-menu {
+    z-index: 1050;
+}

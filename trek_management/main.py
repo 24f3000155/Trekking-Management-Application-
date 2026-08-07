@@ -37,8 +37,8 @@ def create_app():
     """Create and configure the Flask application."""
     app = Flask(__name__, template_folder='templates', static_folder='static')
     
-    # Secure random key for sessions
-    app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
+    # Secure random key for sessions (fallback to static key in dev to prevent session invalidation on reload)
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key-12345")
 
     # Session Security Config
     app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -118,9 +118,13 @@ def init_db():
 if __name__ == "__main__":
     init_db()
     
-    # Auto-create admin if env vars are present
-    if os.environ.get("ADMIN_EMAIL") and os.environ.get("ADMIN_PASSWORD"):
-        create_admin()
+    # Always ensure at least one admin account exists
+    # Uses env vars if set, otherwise creates a default admin
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@trekmanagement.com")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
+    os.environ["ADMIN_EMAIL"] = admin_email
+    os.environ["ADMIN_PASSWORD"] = admin_password
+    create_admin()
 
     app = create_app()
     app.run(host="127.0.0.1", port=5000, debug=True)

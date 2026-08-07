@@ -3,18 +3,18 @@
 {% block title %}Staff: {{ staff_user.name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center mb-4">
-    <a href="{{ url_for('admin.staff_list') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
-    <h1 class="section-title mb-0"><i class="bi bi-person-badge me-2"></i>{{ staff_user.name }}</h1>
-    <div class="ms-auto d-flex gap-2">
+<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
+    <a href="{{ url_for('admin.staff_list') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="section-title mb-0 me-auto"><i class="bi bi-person-badge me-2"></i>{{ staff_user.name }}</h1>
+    <div class="d-flex flex-wrap gap-2">
         {% if staff_user.staff_profile and staff_user.staff_profile.approval_status.value == 'Pending' %}
-        <form method="POST" action="{{ url_for('admin.staff_approve', user_id=staff_user.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-check-lg me-1"></i>Approve</button></form>
-        <form method="POST" action="{{ url_for('admin.staff_reject', user_id=staff_user.id) }}"><button class="btn btn-danger btn-sm"><i class="bi bi-x-lg me-1"></i>Reject</button></form>
+        <form method="POST" action="{{ url_for('admin.staff_approve', user_id=staff_user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success btn-sm"><i class="bi bi-check-lg me-1"></i>Approve</button></form>
+        <form method="POST" action="{{ url_for('admin.staff_reject', user_id=staff_user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-danger btn-sm"><i class="bi bi-x-lg me-1"></i>Reject</button></form>
         {% endif %}
         {% if staff_user.is_active %}
-        <form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=staff_user.id) }}"><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
+        <form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=staff_user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
         {% else %}
-        <form method="POST" action="{{ url_for('admin.staff_activate', user_id=staff_user.id) }}"><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
+        <form method="POST" action="{{ url_for('admin.staff_activate', user_id=staff_user.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
         {% endif %}
     </div>
 </div>

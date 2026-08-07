@@ -24,7 +24,7 @@ def login():
 
         if not email or not password:
             flash("Please enter both email and password.", "danger")
-            return render_template("login.html")
+            return redirect(url_for("auth.login"))
 
         db = SessionLocal()
         try:
@@ -33,30 +33,30 @@ def login():
             # Generic message for invalid credentials — never reveal if email exists
             if user is None or not verify_password(password, user.password_hash):
                 flash("Invalid email or password.", "danger")
-                return render_template("login.html")
+                return redirect(url_for("auth.login"))
 
             # Check if account is blacklisted
             if user.is_blacklisted:
                 flash("Your account has been blacklisted. Please contact the administrator.", "danger")
-                return render_template("login.html")
+                return redirect(url_for("auth.login"))
 
             # Check if account is active
             if not user.is_active:
                 flash("Your account has been deactivated. Please contact the administrator.", "danger")
-                return render_template("login.html")
+                return redirect(url_for("auth.login"))
 
             # Role-specific checks for Trek Staff
             if user.role == UserRole.TREK_STAFF:
                 if user.staff_profile is None:
                     flash("Staff profile not found. Please contact support.", "danger")
-                    return render_template("login.html")
+                    return redirect(url_for("auth.login"))
 
                 if user.staff_profile.approval_status == ApprovalStatus.PENDING:
                     return redirect(url_for("auth.pending_staff"))
 
                 if user.staff_profile.approval_status == ApprovalStatus.REJECTED:
                     flash("Your Trek Staff registration has been rejected.", "danger")
-                    return render_template("login.html")
+                    return redirect(url_for("auth.login"))
 
             # Authentication successful — handle via Flask-Login
             login_user(user, remember=remember)
@@ -102,6 +102,9 @@ def register():
             errors.append("Email is required.")
         elif not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
             errors.append("Please enter a valid email address.")
+            
+        if phone and not re.match(r"^\+?[0-9\-\s]{10,15}$", phone):
+            errors.append("Please enter a valid phone number (10-15 digits).")
         if not password:
             errors.append("Password is required.")
         else:
@@ -176,6 +179,9 @@ def staff_register():
             errors.append("Email is required.")
         elif not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
             errors.append("Please enter a valid email address.")
+            
+        if phone and not re.match(r"^\+?[0-9\-\s]{10,15}$", phone):
+            errors.append("Please enter a valid phone number (10-15 digits).")
         if not password:
             errors.append("Password is required.")
         else:

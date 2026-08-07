@@ -120,6 +120,7 @@
             </div>
         {% else %}
             <form method="POST" action="{{ url_for('user.book_trek', trek_id=trek.id) }}" id="booking-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label for="participants" class="form-label fw-semibold">Number of Participants</label>

@@ -67,8 +67,12 @@ def create_admin():
 
     except Exception as exc:
         db.rollback()
-        print(f"[ERROR] Failed to create admin: {exc}")
-        sys.exit(1)
+        # Gracefully handle duplicate email (e.g., during hot-reload)
+        if "UNIQUE constraint" in str(exc):
+            print(f"[INFO] Admin '{admin_email}' already exists. Skipping.")
+        else:
+            print(f"[ERROR] Failed to create admin: {exc}")
+            sys.exit(1)
     finally:
         db.close()
 
