@@ -1,51 +1,35 @@
-/* ── User / Trekker-specific overrides ──
-   Inherits everything from theme.css.
-   Accent: emerald-green (#2ecc71 family). */
+/* ============================================================
+   USER THEME (Fresh / Adventurous / Energetic)
+   ============================================================ */
 
-/* Navbar */
-.tm-navbar.user-navbar {
-    background: linear-gradient(90deg, #0b3d2e 0%, #145239 100%);
+:root {
+    /* Base Primary overrides for components */
+    --tm-primary: #3dbab3; /* Vibrant teal */
+    --tm-primary-dark: #34908b; /* Darkest teal from palette */
+    
+    /* Secondary/Accents */
+    --tm-secondary: #276b67;
+    
+    /* Background adjustments if needed */
+    --tm-body-bg: #f2f9f8; /* Fresh slight mint background */
+    
+    /* Navigation / Sidebar overrides */
+    --nav-bg: #34908b;
+    --nav-text: #ffffff;
+    --nav-active: rgba(255,255,255,0.25);
+    --nav-hover: rgba(255,255,255,0.15);
 }
 
-.tm-navbar.user-navbar .brand-icon {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
+/* Specific User touches */
+.profile-header {
+    background: linear-gradient(135deg, #3dbab3 0%, #34908b 100%);
 }
 
-/* Sidebar */
-.tm-sidebar.user-sidebar {
-    background: linear-gradient(180deg, #0b3d2e 0%, #145239 100%);
+.stat-card.card-primary::after {
+    color: #34908b;
 }
 
-.tm-sidebar.user-sidebar .nav-link:hover {
-    border-left-color: rgba(46,204,113,.5);
-}
-
-.tm-sidebar.user-sidebar .nav-link.active {
-    background: rgba(46,204,113,.15);
-    color: #2ecc71;
-    border-left-color: #2ecc71;
-}
-
-/* Trek card accent */
-.trek-card .trek-card-accent {
-    background: linear-gradient(90deg, #27ae60, #2ecc71);
-}
-
-.trek-card .trek-price {
-    color: #27ae60;
-}
-
-/* Profile */
-.user-profile-header {
-    background: linear-gradient(135deg, #0b3d2e 0%, #145239 100%);
-}
-
-.user-profile-avatar {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-/* Search */
-.tm-search-bar.user-search:focus {
-    border-color: #2ecc71;
-    box-shadow: 0 0 0 3px rgba(46,204,113,.15);
+/* Subtle fresh shadow */
+.card {
+    box-shadow: 0 4px 16px rgba(52, 144, 139, 0.08);
 }

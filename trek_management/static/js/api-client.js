@@ -56,6 +56,7 @@ class ApiClient {
         };
 
         const fetchOptions = {
+            credentials: 'same-origin',
             ...options,
             headers
         };

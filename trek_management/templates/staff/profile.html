@@ -18,8 +18,8 @@
                 {{ user.name[0]|upper }}
             </div>
             <div>
-                <h3 class="mb-1">{{ user.name }}</h3>
-                <p class="mb-0 opacity-75">{{ user.email }}</p>
+                <h3 class="mb-1 text-dark">{{ user.name }}</h3>
+                <p class="mb-0 opacity-75 text-dark">{{ user.email }}</p>
                 <div class="mt-2">
                     <span class="badge bg-primary bg-opacity-25 text-white me-2">Trek Staff</span>
                     {% if profile.approval_status.value == 'Approved' %}
@@ -90,7 +90,7 @@
     </div>
     <div class="card-body">
         <form method="POST" action="{{ url_for('staff.profile_update') }}" id="profile-update-form">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="phone" class="form-label fw-semibold">Phone</label>

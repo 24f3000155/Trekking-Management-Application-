@@ -85,22 +85,25 @@ class ChartManager {
 
     _showLoading(container) {
         if (!container) return;
-        // Optionally hide existing content/error
         let loader = container.querySelector('.chart-loader');
         if (!loader) {
             loader = document.createElement('div');
-            loader.className = 'chart-loader d-flex justify-content-center align-items-center position-absolute w-100 h-100 top-0 start-0 bg-white bg-opacity-75';
+            loader.className = 'chart-loader justify-content-center align-items-center position-absolute w-100 h-100 top-0 start-0 bg-white bg-opacity-75';
             loader.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
             container.style.position = 'relative';
             container.appendChild(loader);
         }
-        loader.style.display = 'flex';
+        loader.classList.remove('d-none');
+        loader.classList.add('d-flex');
     }
 
     _hideLoading(container) {
         if (!container) return;
         const loader = container.querySelector('.chart-loader');
-        if (loader) loader.style.display = 'none';
+        if (loader) {
+            loader.classList.remove('d-flex');
+            loader.classList.add('d-none');
+        }
     }
 
     _showError(container, message) {

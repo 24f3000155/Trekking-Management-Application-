@@ -1,28 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Login{% endblock %}
+{% block title %}Login — RISE HIGH{% endblock %}
 {% block head %}
 <style>
     body { background: transparent; padding-top: 0 !important; }
     .tm-navbar, .tm-footer { display: none !important; }
+    /* Hide container padding for edge-to-edge layout */
+    .container.py-4 { padding: 0 !important; max-width: 100%; margin: 0; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-    <div class="auth-card">
-        <div class="auth-header">
-            <div class="auth-icon">
-                <i class="bi bi-box-arrow-in-right"></i>
-            </div>
-            <h2>Welcome Back</h2>
-            <p>Login to your Trek Management account</p>
+<div class="auth-split-layout">
+    <!-- Visual side -->
+    <div class="auth-visual">
+        <img src="{{ url_for('static', filename='images/Image1.png') }}" alt="RISE HIGH Background" class="bg-image">
+        <div class="auth-visual-content fade-in-up">
+            <p>Elevate your journey with confidence.</p>
         </div>
-        <div class="auth-body">
-            <!-- Flash logic moved to base.html, but we keep it here just in case since wrapper hides the global one -->
+    </div>
+    
+    <!-- Form side -->
+    <div class="auth-form-panel">
+        <div class="auth-form-container">
+            <h2>Welcome Back</h2>
+            <p class="subtitle">Login to your RISE HIGH account</p>
+            
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
                             {{ message }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
@@ -34,14 +40,14 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                 <div class="form-floating mb-3">
-                    <input type="email" class="form-control form-control-lg" id="email" name="email" placeholder="name@example.com" required autofocus>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required autofocus>
                     <label for="email">Email address</label>
                 </div>
 
-                <div class="form-floating mb-3">
-                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Password" required>
+                <div class="form-floating mb-3 position-relative">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
                     <label for="password">Password</label>
-                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-decoration-none text-muted password-toggle" data-target="password" style="padding: 0 1rem;">
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y text-decoration-none text-muted password-toggle" data-target="password" style="padding: 0 1rem; z-index: 5;">
                         <i class="bi bi-eye"></i>
                     </button>
                 </div>
@@ -55,15 +61,16 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3 d-flex align-items-center justify-content-center gap-2">
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-4 d-flex align-items-center justify-content-center gap-2">
                     <span class="btn-text">Log In</span>
-                    <span class="btn-spinner spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="btn-spinner spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display:none;"></span>
                 </button>
             </form>
-        </div>
-        <div class="auth-footer text-muted border-top pt-3">
-            <p class="mb-1">Don't have a Trekker account? <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-semibold">Register here</a></p>
-            <p class="mb-0">Want to join our staff? <a href="{{ url_for('auth.staff_register') }}" class="text-decoration-none fw-semibold">Apply now</a></p>
+            
+            <div class="auth-footer text-muted border-top pt-3">
+                <p class="mb-1">Don't have a Trekker account? <a href="{{ url_for('auth.register') }}" class="text-decoration-none fw-bold">Register here</a></p>
+                <p class="mb-0">Want to join our staff? <a href="{{ url_for('auth.staff_register') }}" class="text-decoration-none fw-bold">Apply now</a></p>
+            </div>
         </div>
     </div>
 </div>

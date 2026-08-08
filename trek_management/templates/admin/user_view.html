@@ -3,19 +3,23 @@
 {% block title %}User: {{ target.name }}{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
-    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm me-2"><i class="bi bi-arrow-left"></i></a>
-    <h1 class="section-title mb-0 me-auto"><i class="bi bi-person me-2"></i>{{ target.name }}</h1>
-    <div class="d-flex flex-wrap gap-2">
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="section-title mb-0"><i class="bi bi-person me-2"></i>{{ target.name }}</h1>
+    <div class="ms-auto d-flex gap-2">
         {% if target.is_active %}
-        <form method="POST" action="{{ url_for('admin.user_deactivate', user_id=target.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
+        <form method="POST" action="{{ url_for('admin.user_deactivate', user_id=target.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-warning btn-sm"><i class="bi bi-pause-circle me-1"></i>Deactivate</button></form>
         {% else %}
-        <form method="POST" action="{{ url_for('admin.user_activate', user_id=target.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
+        <form method="POST" action="{{ url_for('admin.user_activate', user_id=target.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-success btn-sm"><i class="bi bi-play-circle me-1"></i>Activate</button></form>
         {% endif %}
         {% if target.is_blacklisted %}
-        <form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=target.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-success btn-sm"><i class="bi bi-unlock me-1"></i>Unblacklist</button></form>
+        <form method="POST" action="{{ url_for('admin.user_unblacklist', user_id=target.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-success btn-sm"><i class="bi bi-unlock me-1"></i>Unblacklist</button></form>
         {% else %}
-        <form method="POST" action="{{ url_for('admin.user_blacklist', user_id=target.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-dark btn-sm"><i class="bi bi-slash-circle me-1"></i>Blacklist</button></form>
+        <form method="POST" action="{{ url_for('admin.user_blacklist', user_id=target.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="btn btn-dark btn-sm"><i class="bi bi-slash-circle me-1"></i>Blacklist</button></form>
         {% endif %}
     </div>
 </div>
@@ -81,7 +85,7 @@
                         {% if target.bookings %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead class="table-light"><tr><th>ID</th><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Amount</th></tr></thead>
+                                <thead class="table-light"><tr><th>ID</th><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Payment</th><th>Amount</th></tr></thead>
                                 <tbody>
                                 {% for b in target.bookings|sort(attribute='booking_date', reverse=True) %}
                                 <tr>
@@ -90,10 +94,15 @@
                                     <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                                     <td>{{ b.participants }}</td>
                                     <td>
-                                        {% if b.booking_status.value == 'Booked' %}<span class="badge bg-primary">{{ b.booking_status.value }}</span>
-                                        {% elif b.booking_status.value == 'Completed' %}<span class="badge bg-purple" style="background-color: var(--bs-purple);">{{ b.booking_status.value }}</span>
+                                        {% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>
+                                        {% elif b.booking_status.value == 'Pending' %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>
                                         {% elif b.booking_status.value == 'Cancelled' %}<span class="badge bg-danger">{{ b.booking_status.value }}</span>
                                         {% else %}<span class="badge bg-secondary">{{ b.booking_status.value }}</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if b.payment_status.value == 'Paid' %}<span class="badge bg-success">{{ b.payment_status.value }}</span>
+                                        {% elif b.payment_status.value == 'Refunded' %}<span class="badge bg-info">{{ b.payment_status.value }}</span>
+                                        {% else %}<span class="badge bg-warning text-dark">{{ b.payment_status.value }}</span>{% endif %}
                                     </td>
                                     <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
                                 </tr>
@@ -112,7 +121,7 @@
             <div class="tab-pane fade" id="current">
                 <div class="card shadow-sm border-top-0 rounded-top-0">
                     <div class="card-body p-0">
-                        {% set current_bookings = target.bookings|selectattr('booking_status.value', 'equalto', 'Booked')|list %}
+                        {% set current_bookings = target.bookings|selectattr('booking_status.value', 'in', ['Confirmed', 'Pending'])|list %}
                         {% if current_bookings %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
@@ -123,7 +132,7 @@
                                     <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
                                     <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                                     <td>{{ b.participants }}</td>
-                                    <td><span class="badge bg-primary">{{ b.booking_status.value }}</span></td>
+                                    <td>{% if b.booking_status.value == 'Confirmed' %}<span class="badge bg-success">{{ b.booking_status.value }}</span>{% else %}<span class="badge bg-warning text-dark">{{ b.booking_status.value }}</span>{% endif %}</td>
                                     <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
                                 </tr>
                                 {% endfor %}
@@ -145,14 +154,14 @@
                         {% if completed_bookings %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Amount</th></tr></thead>
+                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Payment</th><th>Amount</th></tr></thead>
                                 <tbody>
                                 {% for b in completed_bookings %}
                                 <tr>
                                     <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
                                     <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                                     <td>{{ b.participants }}</td>
-                                    <td><span class="badge bg-purple" style="background-color: var(--bs-purple);">Completed</span></td>
+                                    <td><span class="badge bg-success">{{ b.payment_status.value }}</span></td>
                                     <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
                                 </tr>
                                 {% endfor %}
@@ -174,14 +183,14 @@
                         {% if cancelled_bookings %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Status</th><th>Amount</th></tr></thead>
+                                <thead class="table-light"><tr><th>Trek</th><th>Date</th><th>Participants</th><th>Payment</th><th>Amount</th></tr></thead>
                                 <tbody>
                                 {% for b in cancelled_bookings %}
                                 <tr>
                                     <td><a href="{{ url_for('admin.trek_view', trek_id=b.trek.id) }}">{{ b.trek.trek_name }}</a></td>
                                     <td>{{ b.booking_date.strftime('%d %b %Y') }}</td>
                                     <td>{{ b.participants }}</td>
-                                    <td><span class="badge bg-danger">Cancelled</span></td>
+                                    <td><span class="badge bg-info">{{ b.payment_status.value }}</span></td>
                                     <td>₹{{ "%.2f"|format(b.total_amount|float) }}</td>
                                 </tr>
                                 {% endfor %}

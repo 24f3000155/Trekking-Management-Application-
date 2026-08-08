@@ -1,44 +1,37 @@
-/* ── Admin-specific overrides ──
-   Inherits everything from theme.css.
-   Only role-specific colours and gradients live here. */
+/* ============================================================
+   ADMIN THEME (Warm / Earthy / Authoritative)
+   ============================================================ */
 
-/* Navbar */
-.tm-navbar.admin-navbar {
-    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+:root {
+    /* Base Primary overrides for components */
+    --tm-primary: #a38f5b; /* Medium warm earth */
+    --tm-primary-dark: #827148; /* Dark earthy color provided by user */
+    
+    /* Secondary/Accents */
+    --tm-secondary: #5a4b31; 
+    
+    /* Background adjustments if needed */
+    --tm-body-bg: #faf9f6; /* Very warm off-white */
+    
+    /* Navigation / Sidebar overrides */
+    --nav-bg: #827148;
+    --nav-text: #ffffff;
+    --nav-active: rgba(255,255,255,0.25);
+    --nav-hover: rgba(255,255,255,0.15);
 }
 
-.tm-navbar.admin-navbar .brand-icon {
-    background: linear-gradient(135deg, #4361ee, #3a56d4);
+/* Specific Admin touches */
+.profile-header {
+    background: linear-gradient(135deg, #a38f5b 0%, #827148 100%);
 }
 
-/* Sidebar */
-.tm-sidebar.admin-sidebar {
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+.stat-card.card-primary::after {
+    color: #a38f5b;
 }
 
-.tm-sidebar.admin-sidebar .nav-link:hover {
-    border-left-color: rgba(67,97,238,.5);
-}
-
-.tm-sidebar.admin-sidebar .nav-link.active {
-    background: rgba(67,97,238,.15);
-    color: #4361ee;
-    border-left-color: #4361ee;
-}
-
-/* Profile */
-.admin-profile-header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-}
-
-.admin-profile-avatar {
-    background: linear-gradient(135deg, #4361ee, #3a56d4);
-}
-
-/* Search */
-.tm-search-bar.admin-search:focus {
-    border-color: #4361ee;
-    box-shadow: 0 0 0 3px rgba(67,97,238,.15);
+/* Subtle earthy shadow */
+.card {
+    box-shadow: 0 4px 16px rgba(130, 113, 72, 0.05);
 }
 
 /* ── Dropdown overflow fix ──

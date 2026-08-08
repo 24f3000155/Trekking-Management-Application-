@@ -17,8 +17,8 @@
                 <div class="profile-avatar mx-auto mb-3">
                     {{ user.name[0]|upper }}
                 </div>
-                <h4 class="mb-1">{{ user.name }}</h4>
-                <p class="mb-0 opacity-75">{{ user.email }}</p>
+                <h4 class="mb-1 text-dark">{{ user.name }}</h4>
+                <p class="mb-0 opacity-75 text-dark">{{ user.email }}</p>
                 <div class="mt-2">
                     <span class="badge bg-success bg-opacity-25 text-white">Trekker</span>
                     {% if user.is_active %}
@@ -47,7 +47,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('user.update_profile') }}" id="profile-update-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="name" class="form-label fw-semibold">Full Name</label>

@@ -1,10 +1,10 @@
 {% extends 'admin_base.html' %}
 
-{% block title %}Trek Staff Management{% endblock %}
+{% block title %}Staff Management{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="section-title mb-0"><i class="bi bi-people me-2"></i>Trek Staff Management</h1>
+    <h1 class="section-title mb-0"><i class="bi bi-people me-2"></i>Staff Management</h1>
     <a href="{{ url_for('admin.staff_create') }}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add Staff</a>
 </div>
 
@@ -80,13 +80,17 @@
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="{{ url_for('admin.staff_view', user_id=s.id) }}"><i class="bi bi-eye me-2"></i>View</a></li>
                                     {% if s.staff_profile and s.staff_profile.approval_status.value == 'Pending' %}
-                                    <li><form method="POST" action="{{ url_for('admin.staff_approve', user_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i>Approve</button></form></li>
-                                    <li><form method="POST" action="{{ url_for('admin.staff_reject', user_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-danger"><i class="bi bi-x-circle me-2"></i>Reject</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.staff_approve', user_id=s.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="dropdown-item text-success"><i class="bi bi-check-circle me-2"></i>Approve</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.staff_reject', user_id=s.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="dropdown-item text-danger"><i class="bi bi-x-circle me-2"></i>Reject</button></form></li>
                                     {% endif %}
                                     {% if s.is_active %}
-                                    <li><form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.staff_deactivate', user_id=s.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="dropdown-item text-warning"><i class="bi bi-pause-circle me-2"></i>Deactivate</button></form></li>
                                     {% else %}
-                                    <li><form method="POST" action="{{ url_for('admin.staff_activate', user_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
+                                    <li><form method="POST" action="{{ url_for('admin.staff_activate', user_id=s.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button class="dropdown-item text-success"><i class="bi bi-play-circle me-2"></i>Activate</button></form></li>
                                     {% endif %}
                                     <li><hr class="dropdown-divider"></li>
                                     <li><button class="dropdown-item text-danger" onclick="confirmDelete('{{ url_for('admin.staff_delete', user_id=s.id) }}', '{{ s.name }}')"><i class="bi bi-trash me-2"></i>Delete</button></li>
@@ -118,7 +122,8 @@
             <div class="modal-body">Are you sure you want to delete <strong id="deleteName"></strong>? Consider deactivating instead.</div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button></form>
+                <form id="deleteForm" method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/><button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Delete</button></form>
             </div>
         </div>
     </div>

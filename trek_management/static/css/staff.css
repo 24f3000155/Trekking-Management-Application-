@@ -1,42 +1,35 @@
-/* ── Staff-specific overrides ──
-   Inherits everything from theme.css.
-   Accent: steel-blue (#4a90e2 family). */
+/* ============================================================
+   STAFF THEME (Calm / Reliable / Organized)
+   ============================================================ */
 
-/* Navbar */
-.tm-navbar.staff-navbar {
-    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 100%);
+:root {
+    /* Base Primary overrides for components */
+    --tm-primary: #78a4cb; 
+    --tm-primary-dark: #628bb0;
+    
+    /* Secondary/Accents */
+    --tm-secondary: #4a6c8c;
+    
+    /* Background adjustments if needed */
+    --tm-body-bg: #f5f8fa; /* Cool reliable off-white */
+    
+    /* Navigation / Sidebar overrides */
+    --nav-bg: #78a4cb;
+    --nav-text: #ffffff;
+    --nav-active: rgba(255,255,255,0.25);
+    --nav-hover: rgba(255,255,255,0.15);
 }
 
-.tm-navbar.staff-navbar .brand-icon {
-    background: linear-gradient(135deg, #4a90e2, #357abd);
+/* Specific Staff touches */
+.profile-header {
+    background: linear-gradient(135deg, #8cb5d6 0%, #78a4cb 100%);
 }
 
-/* Sidebar */
-.tm-sidebar.staff-sidebar {
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+.stat-card.card-primary::after {
+    color: #78a4cb;
 }
 
-.tm-sidebar.staff-sidebar .nav-link:hover {
-    border-left-color: rgba(74,144,226,.5);
-}
-
-.tm-sidebar.staff-sidebar .nav-link.active {
-    background: rgba(74,144,226,.15);
-    color: #4a90e2;
-    border-left-color: #4a90e2;
-}
-
-/* Profile */
-.staff-profile-header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-}
-
-.staff-profile-avatar {
-    background: linear-gradient(135deg, #4a90e2, #357abd);
-}
-
-/* Search */
-.tm-search-bar.staff-search:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 3px rgba(74,144,226,.15);
+/* Subtle cool shadow */
+.card {
+    box-shadow: 0 4px 16px rgba(120, 164, 203, 0.08);
 }

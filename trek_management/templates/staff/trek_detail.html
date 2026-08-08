@@ -12,7 +12,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="section-title"><i class="bi bi-mountain me-2"></i>{{ trek.trek_name }}</h1>
+        <h1 class="section-title"><i class="bi bi-map me-2"></i>{{ trek.trek_name }}</h1>
         <p class="section-subtitle mb-0">Trek #{{ trek.id }} — {{ trek.location }}</p>
     </div>
     <div class="d-flex gap-2">
@@ -80,7 +80,7 @@
             <div class="col-md-6">
                 {% if allowed_transitions %}
                 <form method="POST" action="{{ url_for('staff.update_status', trek_id=trek.id) }}" class="d-flex gap-2">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <select class="form-select" name="status" required>
                         {% for s in allowed_transitions %}
                         <option value="{{ s.value }}">{{ s.value }}</option>
@@ -154,7 +154,7 @@
                             <!-- Attendance Form -->
                             <div class="collapse {% if not b.attendance and trek.status.value == 'Closed' %}show{% endif %}" id="att-{{ b.id }}">
                                 <form action="{{ url_for('staff.mark_attendance', trek_id=trek.id, booking_id=b.id) }}" method="POST" class="d-flex gap-1 mt-2">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <select name="attendance_status" class="form-select form-select-sm" style="width: auto;">
                                         <option value="Present" {% if b.attendance and b.attendance.status.value == 'Present' %}selected{% endif %}>Present</option>
                                         <option value="Absent" {% if b.attendance and b.attendance.status.value == 'Absent' %}selected{% endif %}>Absent</option>
@@ -167,11 +167,11 @@
                             <div class="d-flex gap-1">
                             {% if trek.status.value not in ('Completed', 'Cancelled') and b.booking_status.value == 'Booked' %}
                                 <form action="{{ url_for('staff.complete_participant', trek_id=trek.id, booking_id=b.id) }}" method="POST">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="btn btn-sm btn-outline-success" title="Mark turn up/complete" onclick="return confirm('Complete this booking manually?');"><i class="bi bi-check-lg"></i></button>
                                 </form>
                                 <form action="{{ url_for('staff.cancel_participant', trek_id=trek.id, booking_id=b.id) }}" method="POST">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel booking" onclick="return confirm('Cancel this booking?');"><i class="bi bi-x-lg"></i></button>
                                 </form>
                             {% else %}

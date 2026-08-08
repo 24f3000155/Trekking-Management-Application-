@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Trek Explorer — discover and book amazing treks.">
+    <meta name="description" content="RISE HIGH — discover and book amazing treks.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}Dashboard{% endblock %} — Trek Explorer</title>
+    <title>{% block title %}Dashboard{% endblock %} — RISE HIGH</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/theme.css') }}" rel="stylesheet">
@@ -21,8 +21,7 @@
             <i class="bi bi-list"></i>
         </button>
         <a class="navbar-brand" href="{{ url_for('user.dashboard') }}">
-            <span class="brand-icon"><i class="bi bi-geo-alt-fill"></i></span>
-            Trek Explorer
+            RISE HIGH Trekker
         </a>
     </div>
     <div class="nav-end">
@@ -52,7 +51,7 @@
         <li class="nav-item">
             <a class="nav-link {% if request.endpoint in ('user.available_treks','user.trek_detail') %}active{% endif %}"
                href="{{ url_for('user.available_treks') }}" id="nav-treks">
-                <i class="bi bi-mountain"></i> <span>Available Treks</span>
+                <i class="bi bi-map"></i> <span>Available Treks</span>
             </a>
         </li>
         <li class="nav-item">
@@ -107,7 +106,7 @@
     {% block content %}{% endblock %}
 
     <footer class="tm-footer">
-        <p class="mb-0">&copy; 2026 Trek Explorer — All rights reserved.</p>
+        <p class="mb-0">&copy; 2026 RISE HIGH — All rights reserved.</p>
     </footer>
 </div>
 

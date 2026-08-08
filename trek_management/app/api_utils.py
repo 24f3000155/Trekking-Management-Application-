@@ -74,9 +74,11 @@ def _get_api_user():
     Checks Flask session (for browser AJAX calls from dashboards).
     Returns (User, None) on success or (None, error_response) on failure.
     """
-    user_id = session.get("user_id")
-    if user_id is None:
+    from flask_login import current_user
+    if not current_user.is_authenticated:
         return None, api_error("Authentication required", status_code=401)
+
+    user_id = current_user.id
 
     db = SessionLocal()
     try:
